@@ -18,4 +18,8 @@ defmodule ChessApp.Game do
   def add_player_to_game(player_id, state = %ChessApp.Game{gameServer: _pid, whitePlayer: _player, blackPlayer: nil}) do
     Map.put(state, :blackPlayer, player_id)
   end
+  def add_player_to_game(_player_id, state = %ChessApp.Game{gameServer: _pid, whitePlayer: _player, blackPlayer: _player2}) do
+    # if both players have already been set, don't do anything
+    state
+  end
 end
