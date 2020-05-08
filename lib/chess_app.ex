@@ -3,16 +3,11 @@ defmodule ChessApp do
   Documentation for `ChessApp`.
   """
 
-  @doc """
-  Hello world.
+  use Application
 
-  ## Examples
 
-      iex> ChessApp.hello()
-      :world
-
-  """
-  def hello do
-    :world
+  def start(_type, _arg) do
+    children = []
+    Supervisor.start_link(children, strategy: :one_for_one)
   end
 end
