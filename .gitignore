@@ -22,3 +22,5 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 chess_app-*.tar
 
+# Ignore IntelliJ project files
+/.idea/
