@@ -1,8 +1,8 @@
-defmodule ChessServerTest do
+defmodule ChessAppTest do
   use ExUnit.Case
-  doctest ChessServer
+  doctest ChessApp
 
   test "greets the world" do
-    assert ChessServer.hello() == :world
+    assert ChessApp.hello() == :world
   end
 end

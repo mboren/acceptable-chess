@@ -1,6 +1,6 @@
-defmodule ChessServer do
+defmodule ChessApp do
   @moduledoc """
-  Documentation for `ChessServer`.
+  Documentation for `ChessApp`.
   """
 
   @doc """
@@ -8,7 +8,7 @@ defmodule ChessServer do
 
   ## Examples
 
-      iex> ChessServer.hello()
+      iex> ChessApp.hello()
       :world
 
   """
