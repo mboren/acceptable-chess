@@ -20,4 +20,12 @@ defmodule ChessApp do
     GenServer.start_link(ChessApp.Game.Server, [], name: {:via, Registry, {ChessApp.Registry, game_id}})
     game_id
   end
+
+  def join_game(game_id, player_id) do
+    ChessApp.Game.Interface.join_game(game_id, player_id)
+  end
+
+  def make_move(game_id, player_id, move) do
+    ChessApp.Game.Interface.make_move(game_id, player_id, move)
+  end
 end

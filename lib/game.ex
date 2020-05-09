@@ -22,4 +22,26 @@ defmodule ChessApp.Game do
     # if both players have already been set, don't do anything
     state
   end
+
+  def get_player_color(player_id, %ChessApp.Game{whitePlayer: player_id}) do
+    :white
+  end
+  def get_player_color(player_id, %ChessApp.Game{blackPlayer: player_id}) do
+    :black
+  end
+
+  def make_move(player_id, move, state = %ChessApp.Game{gameServer: pid}) do
+    {:ok, color_to_move} = :binbo.side_to_move(pid)
+    player_color = get_player_color(player_id, state)
+    if color_to_move == player_color do
+      :binbo.move(pid, move)
+    else
+      {:error, :wrong_player}
+    end
+  end
+
+
+  def get_board_state(%ChessApp.Game{gameServer: pid}) do
+    :binbo.get_fen(pid)
+  end
 end
