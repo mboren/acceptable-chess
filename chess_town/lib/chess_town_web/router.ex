@@ -13,7 +13,7 @@ defmodule ChessTownWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/", ChessTownWeb do
+  scope "/chess", ChessTownWeb do
     pipe_through :browser
 
     get "/", PageController, :index
