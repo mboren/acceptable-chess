@@ -1,0 +1,4 @@
+%{
+  "binbo": {:hex, :binbo, "1.2.3", "636963967fff6345087782d5f1743da79eb9bde4127fb95a323542a5f986e6aa", [:rebar3], [{:uef, "2.5.3", [hex: :uef, repo: "hexpm", optional: false]}], "hexpm", "bb35e1b23f7f47e20974fec0cbf33598f95df73b3698b403f8e2f5c417901c38"},
+  "uef": {:hex, :uef, "2.5.3", "78a71f8b875d217d6c027bf96563b4fbbf8d7910560abd6298546eddbba7eb1d", [:rebar3], [], "hexpm", "f03e75d863f055ad59190a98ea62144bbb77d9bf029a42d4a7c4a896d6722917"},
+}
