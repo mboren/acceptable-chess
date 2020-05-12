@@ -1,0 +1,6 @@
+FEN: <%= @fen %>
+
+<%= form_for(@conn, Routes.page_path(@conn, :play_game, @game_id), [as: :move, method: :post], fn f -> %>
+    <%= text_input(f, :move_text) %>
+    <%= submit("Make move") %>
+<% end) %>

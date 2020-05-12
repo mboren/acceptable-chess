@@ -17,6 +17,12 @@ defmodule ChessTownWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :index
+    get "/:game_id/play", PageController, :play_game
+    post  "/:game_id/play", PageController, :move
+    get  "/:game_id/join", PageController, :join_game
+
+    post "/", PageController, :new_game
+
   end
 
   # Other scopes may use custom stacks.
