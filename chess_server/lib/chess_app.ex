@@ -22,10 +22,16 @@ defmodule ChessApp do
   end
 
   def join_game(game_id, player_id) do
-    ChessApp.Game.Interface.join_game(game_id, player_id)
+    [{pid, _}] = Registry.lookup(ChessApp.Registry, game_id)
+    ChessApp.Game.Interface.join_game(pid, player_id)
   end
 
   def make_move(game_id, player_id, move) do
-    ChessApp.Game.Interface.make_move(game_id, player_id, move)
+    [{pid, _}] = Registry.lookup(ChessApp.Registry, game_id)
+    ChessApp.Game.Interface.make_move(pid, player_id, move)
+  end
+  def get_board_state(game_id) do
+    [{pid, _}] = Registry.lookup(ChessApp.Registry, game_id)
+    ChessApp.Game.Interface.get_board_state(pid)
   end
 end
