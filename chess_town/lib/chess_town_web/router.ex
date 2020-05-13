@@ -23,6 +23,8 @@ defmodule ChessTownWeb.Router do
 
     post "/", PageController, :new_game
 
+    get "/elm", PageController, :elm_index
+
   end
 
   # Other scopes may use custom stacks.
