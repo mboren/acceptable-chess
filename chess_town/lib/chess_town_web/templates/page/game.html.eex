@@ -4,3 +4,12 @@ FEN: <%= @fen %>
     <%= text_input(f, :move_text) %>
     <%= submit("Make move") %>
 <% end) %>
+
+<div id="game-id" data-game-id="<%= @game_id %>" data-player-id="<%= @player_id %>"></div>
+<div id="elm-main"></div>
+
+<div id="messages" role="log" aria-live="polite"></div>
+<input id="chat-input" type="text"></input>
+
+<script type="text/javascript" src="<%= Routes.static_path(@conn, "/js/game.js") %>"></script>
+<script type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>

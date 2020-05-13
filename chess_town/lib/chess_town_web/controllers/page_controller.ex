@@ -24,7 +24,7 @@ defmodule ChessTownWeb.PageController do
     player_id = get_session(conn, :player_id)
     {:ok, fen} = ChessApp.get_board_state(deserialize(game_id))
 
-    render(conn, "game.html", %{fen: fen, game_id: game_id})
+    render(conn, "game.html", %{fen: fen, game_id: game_id, player_id: serialize(player_id)})
   end
   def join_game(conn, %{"game_id" => game_id}) do
     player_id = ChessApp.get_player_id()
@@ -40,7 +40,7 @@ defmodule ChessTownWeb.PageController do
     ChessApp.make_move(deserialize(game_id), player_id, move_text)
     {:ok, fen} = ChessApp.get_board_state(deserialize(game_id))
 
-    render(conn, "game.html", %{fen: fen, game_id: game_id})
+    render(conn, "game.html", %{fen: fen, game_id: game_id, player_id: serialize(player_id)})
   end
 
   def serialize(term) do
