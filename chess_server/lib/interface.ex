@@ -20,4 +20,8 @@ defmodule ChessApp.Game.Interface do
   def get_board_state(server) do
     GenServer.call(server, {:get_board_state})
   end
+
+  def get_game_state(server) do
+    GenServer.call(server, {:get_game_state})
+  end
 end

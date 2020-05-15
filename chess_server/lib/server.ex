@@ -34,5 +34,9 @@ defmodule ChessApp.Game.Server do
   def handle_call({:get_board_state}, _from, state) do
     {:reply, ChessApp.Game.get_board_state(state), state}
   end
+  @impl true
+  def handle_call({:get_game_state}, _from, state) do
+    {:reply, ChessApp.Game.get_game_state(state), state}
+  end
 
 end

@@ -44,4 +44,33 @@ defmodule ChessApp.Game do
   def get_board_state(%ChessApp.Game{gameServer: pid}) do
     :binbo.get_fen(pid)
   end
+
+  def get_game_state(%ChessApp.Game{gameServer: pid}) do
+    {:ok, fen} = :binbo.get_fen(pid)
+    {:ok, legal_moves} =  :binbo.all_legal_moves(pid, :bin)
+    {:ok, player_to_move} =  :binbo.side_to_move(pid)
+    {:ok, status} =  :binbo.game_status(pid)
+
+    %{board: fen,
+      legal_moves: process_legal_moves(legal_moves),
+      player_to_move: player_to_move,
+      status: status,
+    }
+  end
+
+  def process_legal_moves(moves) do
+    Enum.map(moves, fn f ->  process_move(f) end)
+  end
+
+  def process_move({start, stop}) do
+    %{start: start,
+      end: stop
+    }
+  end
+  def process_move({start, stop, promo}) do
+    %{start: start,
+      end: stop,
+      promotion: promo,
+    }
+  end
 end
