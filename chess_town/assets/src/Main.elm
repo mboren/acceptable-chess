@@ -5,6 +5,7 @@ import Html exposing (Html, text)
 import Html.Attributes
 import Html.Events
 import Json.Decode exposing (Decoder, field, string, succeed)
+import Piece exposing (Piece)
 import Player exposing (Player)
 
 
@@ -131,6 +132,59 @@ view model =
         Loaded state movetext ->
             Html.div []
                 [ text state.board
+                , boardToHtml (state.board |> fenToBoard |> Maybe.withDefault [ [] ])
                 , Html.input [ Html.Attributes.value movetext, Html.Events.onInput NewMoveText ] []
                 , Html.button [ Html.Events.onClick SendMove ] [ text "submit" ]
                 ]
+
+
+fenToBoard : String -> Maybe (List (List (Maybe Piece)))
+fenToBoard fen =
+    case getPositionPart fen of
+        Nothing ->
+            Nothing
+
+        Just text ->
+            text
+                |> String.split "/"
+                |> List.map rowToPieces
+                |> Just
+
+
+getPositionPart fen =
+    String.split " " fen
+        |> List.head
+
+
+rowToPieces row =
+    row
+        |> replaceNumbers ""
+        |> String.toList
+        |> List.map Piece.fromChar
+
+
+replaceNumbers : String -> String -> String
+replaceNumbers processed unprocessed =
+    case String.uncons unprocessed of
+        Nothing ->
+            processed
+
+        Just ( head, tail ) ->
+            if Char.isDigit head then
+                replaceNumbers (processed ++ String.repeat (Maybe.withDefault 0 (String.toInt (String.fromChar head))) "_") tail
+
+            else
+                replaceNumbers (processed ++ String.fromChar head) tail
+
+
+boardToHtml : List (List (Maybe Piece)) -> Html Msg
+boardToHtml board =
+    Html.pre [] [ Html.text (boardToText board) ]
+
+
+boardToText board =
+    board
+        |> List.map (List.map (Maybe.map Piece.toString))
+        |> List.map (List.map (Maybe.withDefault "-"))
+        |> List.map (String.join "")
+        |> String.join "\n"
