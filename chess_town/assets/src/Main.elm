@@ -9,6 +9,12 @@ import Piece exposing (Piece)
 import Player exposing (Player)
 
 
+port sendMessage : String -> Cmd msg
+
+
+port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
+
+
 type GameStatus
     = PlayerToMove Player
     | Winner Player
@@ -42,12 +48,6 @@ main =
         , update = update
         , subscriptions = subscriptions
         }
-
-
-port sendMessage : String -> Cmd msg
-
-
-port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
 
 
 type Msg
