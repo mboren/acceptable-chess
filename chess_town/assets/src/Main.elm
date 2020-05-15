@@ -5,11 +5,7 @@ import Html exposing (Html, text)
 import Html.Attributes
 import Html.Events
 import Json.Decode exposing (Decoder, field, string, succeed)
-
-
-type Player
-    = White
-    | Black
+import Player exposing (Player)
 
 
 type GameStatus
