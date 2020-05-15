@@ -2,7 +2,7 @@ defmodule ChessTownWeb.UserSocket do
   use Phoenix.Socket
 
   ## Channels
-  # channel "room:*", ChessTownWeb.RoomChannel
+   channel "room:*", ChessTownWeb.RoomChannel
 
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After
