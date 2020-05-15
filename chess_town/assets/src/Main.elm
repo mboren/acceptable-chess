@@ -50,9 +50,7 @@ port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
 
 
 type Msg
-    = Send
-    | Recv String
-    | GetState Json.Decode.Value
+    = GetState Json.Decode.Value
     | NewMoveText String
     | SendMove
 
@@ -60,16 +58,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Send ->
-            ( model, sendMessage "hello" )
-
-        Recv text ->
-            let
-                _ =
-                    Debug.log "Got text: " text
-            in
-            ( model, Cmd.none )
-
         NewMoveText text ->
             case model of
                 WaitingForInitialization ->
