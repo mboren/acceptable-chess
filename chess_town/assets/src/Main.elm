@@ -16,12 +16,12 @@ port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
 
 
 type GameStatus
-    = PlayerToMove Player
+    = PlayerToMove Player (List Move)
     | Winner Player
 
 
-type Move
-    = String
+type alias Move =
+    String
 
 
 type alias GameState =
@@ -31,9 +31,39 @@ type alias GameState =
     }
 
 
+type ServerGameStatus
+    = Continue
+    | Checkmate
+
+
+type alias ServerGameState =
+    { board : String
+    , status : ServerGameStatus
+    , playerToMove : Player
+    , legalMoves : List { start : String, end : String }
+    }
+
+
 type Model
     = WaitingForInitialization
     | Loaded GameState String
+
+
+transformServerGameState : ServerGameState -> GameState
+transformServerGameState { board, status, playerToMove, legalMoves } =
+    let
+        newStatus =
+            case status of
+                Continue ->
+                    PlayerToMove playerToMove (List.map (\{ start, end } -> start ++ end) legalMoves)
+
+                Checkmate ->
+                    Winner (Player.other playerToMove)
+    in
+    { board = board
+    , status = newStatus
+    , history = []
+    }
 
 
 init _ =
@@ -94,28 +124,44 @@ update msg model =
 
                 Ok state ->
                     let
+                        transformedState =
+                            transformServerGameState state
+
                         newModel =
                             case model of
                                 WaitingForInitialization ->
-                                    Loaded state ""
+                                    Loaded transformedState ""
 
                                 Loaded oldState text ->
-                                    Loaded state text
+                                    Loaded transformedState text
                     in
                     ( newModel, Cmd.none )
 
 
-boardStateDecoder : Decoder GameState
+boardStateDecoder : Decoder ServerGameState
 boardStateDecoder =
-    Json.Decode.map3 GameState
+    Json.Decode.map4 ServerGameState
         (field "board" string)
         (field "status" gameStatusDecoder)
-        (field "history" (succeed []))
+        (field "player_to_move" Player.decode)
+        (field "legal_moves" (succeed []))
 
 
-gameStatusDecoder : Decoder GameStatus
+gameStatusDecoder : Decoder ServerGameStatus
 gameStatusDecoder =
-    Json.Decode.succeed (PlayerToMove White)
+    string |> Json.Decode.andThen gameStatusDecoderHelp
+
+
+gameStatusDecoderHelp s =
+    case s of
+        "continue" ->
+            Json.Decode.succeed Continue
+
+        "checkmate" ->
+            Json.Decode.succeed Checkmate
+
+        _ ->
+            Json.Decode.fail ("Unhandled status: " ++ s)
 
 
 subscriptions : Model -> Sub Msg
