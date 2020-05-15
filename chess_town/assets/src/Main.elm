@@ -144,7 +144,13 @@ boardStateDecoder =
         (field "board" string)
         (field "status" gameStatusDecoder)
         (field "player_to_move" Player.decode)
-        (field "legal_moves" (succeed []))
+        (field "legal_moves" (Json.Decode.list moveDecoder))
+
+moveDecoder : Decoder {start: String, end: String}
+moveDecoder =
+    Json.Decode.map2 (\start end->{start = start, end = end})
+        (field "start" string)
+        (field "end" string)
 
 
 gameStatusDecoder : Decoder ServerGameStatus
