@@ -2,13 +2,14 @@ defmodule ChessApp.Game do
   defstruct(
     gameServer: nil,
     whitePlayer: nil,
-    blackPlayer: nil
+    blackPlayer: nil,
+    history: []
   )
 
   def new_game() do
     {:ok, pid} = :binbo.new_server()
     :binbo.new_game(pid)
-    %ChessApp.Game{gameServer: pid}
+    %ChessApp.Game{gameServer: pid, history: []}
   end
 
   def add_player_to_game(player_id, state = %ChessApp.Game{gameServer: _pid, whitePlayer: nil, blackPlayer: _player}) do
@@ -34,18 +35,24 @@ defmodule ChessApp.Game do
     {:ok, color_to_move} = :binbo.side_to_move(pid)
     player_color = get_player_color(player_id, state)
     if color_to_move == player_color do
-      :binbo.move(pid, move)
+      add_move_to_history(:binbo.move(pid, move_map_to_string(move)), move, state)
     else
-      {:error, :wrong_player}
+      state
     end
   end
 
+  defp add_move_to_history({:ok, _}, move, state) do
+    Map.put(state, :history, [move | state.history])
+  end
+  defp add_move_to_history({:error, _}, _move, state) do
+    state
+  end
 
   def get_board_state(%ChessApp.Game{gameServer: pid}) do
     :binbo.get_fen(pid)
   end
 
-  def get_game_state(player_id, state = %ChessApp.Game{gameServer: pid}) do
+  def get_game_state(player_id, state = %ChessApp.Game{gameServer: pid, history: history}) do
     {:ok, fen} = :binbo.get_fen(pid)
     {:ok, legal_moves} =  :binbo.all_legal_moves(pid, :bin)
     {:ok, player_to_move} =  :binbo.side_to_move(pid)
@@ -57,6 +64,7 @@ defmodule ChessApp.Game do
       player_to_move: player_to_move,
       player_color: player_color,
       status: status,
+      history: history,
     }
   end
 
@@ -74,5 +82,9 @@ defmodule ChessApp.Game do
       end: stop,
       promotion: promo,
     }
+  end
+
+  defp move_map_to_string(%{"start" => s, "end" => e}) do
+    s <> e
   end
 end

@@ -25,9 +25,8 @@ defmodule ChessApp.Game.Server do
 
   @impl true
   def handle_call({:make_move, player_id, move}, _from, state) do
-    # for now this call does not modify the game's state, it modifies the
-    # binbo processes state, so we don't need to update here.
-    {:reply, ChessApp.Game.make_move(player_id, move, state), state}
+    new_state = ChessApp.Game.make_move(player_id, move, state)
+    {:reply, new_state, new_state}
   end
 
   @impl true

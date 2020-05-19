@@ -10,6 +10,7 @@ import Player exposing (Player)
 
 
 port sendMessage : String -> Cmd msg
+port sendMove : Move -> Cmd msg
 
 
 port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
@@ -47,6 +48,7 @@ type alias ServerGameState =
     , playerToMove : Player
     , yourPlayer : Player -- TODO I don't like this naming
     , legalMoves : List Move
+    , history : List Move
     }
 
 
@@ -133,7 +135,7 @@ update msg model =
                     case data.selection of
                         SelectedMove move ->
                             ( WaitingForMoveToBeAccepted { mySide = data.mySide, legalMoves = data.legalMoves, board = data.board, history = data.history, moveSent = move }
-                            , sendMessage data.moveText
+                            , sendMove move
                             )
 
                         _ ->
@@ -164,7 +166,7 @@ update msg model =
                                         { mySide = state.yourPlayer
                                         , legalMoves = state.legalMoves
                                         , board = state.board
-                                        , history = [] -- TODO
+                                        , history = state.history
                                         , selection = SelectingStart
                                         , moveText = ""
                                         }
@@ -175,7 +177,7 @@ update msg model =
                                             { mySide = data.mySide
                                             , legalMoves = state.legalMoves
                                             , board = state.board
-                                            , history = [] -- TODO
+                                            , history = state.history
                                             , selection = SelectingStart
                                             , moveText = ""
                                             }
@@ -184,7 +186,7 @@ update msg model =
                                         OtherPlayersTurn
                                             { mySide = data.mySide
                                             , board = state.board
-                                            , history = [] -- TODO
+                                            , history = state.history
                                             }
 
                                 MyTurn data ->
@@ -193,7 +195,7 @@ update msg model =
                                             { mySide = data.mySide
                                             , legalMoves = state.legalMoves
                                             , board = state.board
-                                            , history = [] -- TODO
+                                            , history = state.history
                                             , selection = data.selection
                                             , moveText = data.moveText
                                             }
@@ -202,7 +204,7 @@ update msg model =
                                         OtherPlayersTurn
                                             { mySide = data.mySide
                                             , board = state.board
-                                            , history = [] -- TODO
+                                            , history = state.history
                                             }
 
                                 OtherPlayersTurn data ->
@@ -211,7 +213,7 @@ update msg model =
                                             { mySide = data.mySide
                                             , legalMoves = state.legalMoves
                                             , board = state.board
-                                            , history = [] -- TODO
+                                            , history = state.history
                                             , selection = SelectingStart
                                             , moveText = ""
                                             }
@@ -220,7 +222,7 @@ update msg model =
                                         OtherPlayersTurn
                                             { mySide = data.mySide
                                             , board = state.board
-                                            , history = [] -- TODO
+                                            , history = state.history
                                             }
                     in
                     ( newModel, Cmd.none )
@@ -228,12 +230,13 @@ update msg model =
 
 boardStateDecoder : Decoder ServerGameState
 boardStateDecoder =
-    Json.Decode.map5 ServerGameState
+    Json.Decode.map6 ServerGameState
         (field "board" string)
         (field "status" gameStatusDecoder)
         (field "player_to_move" Player.decode)
         (field "player_color" Player.decode)
         (field "legal_moves" (Json.Decode.list moveDecoder))
+        (field "history" (Json.Decode.list moveDecoder))
 
 
 moveDecoder : Decoder { start : String, end : String }

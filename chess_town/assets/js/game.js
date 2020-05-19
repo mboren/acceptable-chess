@@ -49,3 +49,7 @@ app.ports.sendMessage.subscribe(function (message) {
     }
 })
 
+app.ports.sendMove.subscribe(function (message) {
+    console.log("move from elm: ", message)
+    channel.push("move", {game_id: gameId, player_id: playerId, move: message})
+})
