@@ -145,10 +145,6 @@ update msg model =
                     ( model, Cmd.none )
 
         GetState value ->
-            let
-                _ =
-                    Debug.log "Got text: " value
-            in
             case Json.Decode.decodeValue boardStateDecoder value of
                 Err err ->
                     let
