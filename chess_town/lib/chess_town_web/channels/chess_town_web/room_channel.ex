@@ -9,15 +9,15 @@ defmodule ChessTownWeb.RoomChannel do
     {:ok, socket}
   end
 
-  def handle_in("ready", %{"game_id" => game_id}, socket) do
-    game_state = ChessApp.get_game_state(deserialize(game_id))
+  def handle_in("ready", %{"game_id" => game_id, "player_id" => player_id}, socket) do
+    game_state = ChessApp.get_game_state(deserialize(game_id), deserialize(player_id))
     broadcast!(socket, "game_state", %{body: game_state})
     {:noreply, socket}
   end
 
   def handle_in("move", %{"game_id" => game_id, "player_id" => player_id, "move" => move_text}, socket) do
     ChessApp.make_move(deserialize(game_id), deserialize(player_id), move_text)
-    game_state = ChessApp.get_game_state(deserialize(game_id))
+    game_state = ChessApp.get_game_state(deserialize(game_id), deserialize(player_id))
     broadcast!(socket, "game_state", %{body: game_state})
     {:noreply, socket}
   end

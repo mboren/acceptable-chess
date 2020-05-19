@@ -15,20 +15,25 @@ port sendMessage : String -> Cmd msg
 port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
 
 
-type GameStatus
-    = PlayerToMove Player (List Move)
-    | Winner Player
+type Model
+    = WaitingForInitialization
+    | MyTurn { mySide : Player, legalMoves : List Move, board : String, history : List Move, selection : Selection, moveText : String }
+    | WaitingForMoveToBeAccepted { mySide : Player, legalMoves : List Move, board : String, history : List Move, moveSent : Move }
+    | OtherPlayersTurn { mySide : Player, board : String, history : List Move }
+
+
+type Selection
+    = SelectingStart
+    | SelectingEnd Square
+    | SelectedMove Move
 
 
 type alias Move =
+    { start : Square, end : Square }
+
+
+type alias Square =
     String
-
-
-type alias GameState =
-    { board : String
-    , status : GameStatus
-    , history : List Move
-    }
 
 
 type ServerGameStatus
@@ -40,29 +45,8 @@ type alias ServerGameState =
     { board : String
     , status : ServerGameStatus
     , playerToMove : Player
-    , legalMoves : List { start : String, end : String }
-    }
-
-
-type Model
-    = WaitingForInitialization
-    | Loaded GameState String
-
-
-transformServerGameState : ServerGameState -> GameState
-transformServerGameState { board, status, playerToMove, legalMoves } =
-    let
-        newStatus =
-            case status of
-                Continue ->
-                    PlayerToMove playerToMove (List.map (\{ start, end } -> start ++ end) legalMoves)
-
-                Checkmate ->
-                    Winner (Player.other playerToMove)
-    in
-    { board = board
-    , status = newStatus
-    , history = []
+    , yourPlayer : Player -- TODO I don't like this naming
+    , legalMoves : List Move
     }
 
 
@@ -86,28 +70,77 @@ type Msg
     | SendMove
 
 
+squareFromChars : Char -> Char -> Maybe Square
+squareFromChars file rank =
+    if
+        List.member file [ 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' ]
+            && List.member rank [ '1', '2', '3', '4', '5', '6', '7', '8' ]
+    then
+        Just (String.fromList [ file, rank ])
+
+    else
+        Nothing
+
+
+squaresFromText : String -> Selection
+squaresFromText text =
+    case String.toList text of
+        [ file, rank ] ->
+            case squareFromChars file rank of
+                Nothing ->
+                    SelectingStart
+
+                Just sq ->
+                    SelectingEnd sq
+
+        [ startFile, startRank, endFile, endRank ] ->
+            case ( squareFromChars startFile startRank, squareFromChars endFile endRank ) of
+                ( Just start, Nothing ) ->
+                    SelectingEnd start
+
+                ( Just start, Just end ) ->
+                    SelectedMove (Move start end)
+
+                _ ->
+                    SelectingStart
+
+        _ ->
+            SelectingStart
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         NewMoveText text ->
             case model of
-                WaitingForInitialization ->
-                    ( WaitingForInitialization, Cmd.none )
+                MyTurn data ->
+                    let
+                        newSelection =
+                            squaresFromText text
+                    in
+                    ( MyTurn { data | selection = newSelection, moveText = text }, Cmd.none )
 
-                Loaded state oldText ->
-                    ( Loaded state text, Cmd.none )
+                _ ->
+                    ( model, Cmd.none )
 
         SendMove ->
             case model of
-                WaitingForInitialization ->
-                    ( model, Cmd.none )
-
-                Loaded state text ->
+                MyTurn data ->
                     let
                         _ =
-                            Debug.log "sending move from elm" text
+                            Debug.log "sending move from elm" data.moveText
                     in
-                    ( Loaded state "", sendMessage text )
+                    case data.selection of
+                        SelectedMove move ->
+                            ( WaitingForMoveToBeAccepted { mySide = data.mySide, legalMoves = data.legalMoves, board = data.board, history = data.history, moveSent = move }
+                            , sendMessage data.moveText
+                            )
+
+                        _ ->
+                            ( model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         GetState value ->
             let
@@ -124,31 +157,88 @@ update msg model =
 
                 Ok state ->
                     let
-                        transformedState =
-                            transformServerGameState state
-
                         newModel =
                             case model of
                                 WaitingForInitialization ->
-                                    Loaded transformedState ""
+                                    MyTurn
+                                        { mySide = state.yourPlayer
+                                        , legalMoves = state.legalMoves
+                                        , board = state.board
+                                        , history = [] -- TODO
+                                        , selection = SelectingStart
+                                        , moveText = ""
+                                        }
 
-                                Loaded oldState text ->
-                                    Loaded transformedState text
+                                WaitingForMoveToBeAccepted data ->
+                                    if data.mySide == state.playerToMove then
+                                        MyTurn
+                                            { mySide = data.mySide
+                                            , legalMoves = state.legalMoves
+                                            , board = state.board
+                                            , history = [] -- TODO
+                                            , selection = SelectingStart
+                                            , moveText = ""
+                                            }
+
+                                    else
+                                        OtherPlayersTurn
+                                            { mySide = data.mySide
+                                            , board = state.board
+                                            , history = [] -- TODO
+                                            }
+
+                                MyTurn data ->
+                                    if data.mySide == state.playerToMove then
+                                        MyTurn
+                                            { mySide = data.mySide
+                                            , legalMoves = state.legalMoves
+                                            , board = state.board
+                                            , history = [] -- TODO
+                                            , selection = data.selection
+                                            , moveText = data.moveText
+                                            }
+
+                                    else
+                                        OtherPlayersTurn
+                                            { mySide = data.mySide
+                                            , board = state.board
+                                            , history = [] -- TODO
+                                            }
+
+                                OtherPlayersTurn data ->
+                                    if data.mySide == state.playerToMove then
+                                        MyTurn
+                                            { mySide = data.mySide
+                                            , legalMoves = state.legalMoves
+                                            , board = state.board
+                                            , history = [] -- TODO
+                                            , selection = SelectingStart
+                                            , moveText = ""
+                                            }
+
+                                    else
+                                        OtherPlayersTurn
+                                            { mySide = data.mySide
+                                            , board = state.board
+                                            , history = [] -- TODO
+                                            }
                     in
                     ( newModel, Cmd.none )
 
 
 boardStateDecoder : Decoder ServerGameState
 boardStateDecoder =
-    Json.Decode.map4 ServerGameState
+    Json.Decode.map5 ServerGameState
         (field "board" string)
         (field "status" gameStatusDecoder)
         (field "player_to_move" Player.decode)
+        (field "player_color" Player.decode)
         (field "legal_moves" (Json.Decode.list moveDecoder))
 
-moveDecoder : Decoder {start: String, end: String}
+
+moveDecoder : Decoder { start : String, end : String }
 moveDecoder =
-    Json.Decode.map2 (\start end->{start = start, end = end})
+    Json.Decode.map2 (\start end -> { start = start, end = end })
         (field "start" string)
         (field "end" string)
 
@@ -181,12 +271,23 @@ view model =
         WaitingForInitialization ->
             text "waiting for state from backend"
 
-        Loaded state movetext ->
+        MyTurn data ->
             Html.div []
-                [ text state.board
-                , boardToHtml (state.board |> fenToBoard |> Maybe.withDefault [ [] ])
-                , Html.input [ Html.Attributes.value movetext, Html.Events.onInput NewMoveText ] []
+                [ boardToHtml (data.board |> fenToBoard |> Maybe.withDefault [ [] ])
+                , Html.input [ Html.Attributes.value data.moveText, Html.Events.onInput NewMoveText ] []
                 , Html.button [ Html.Events.onClick SendMove ] [ text "submit" ]
+                ]
+
+        WaitingForMoveToBeAccepted data ->
+            Html.div []
+                [ boardToHtml (data.board |> fenToBoard |> Maybe.withDefault [ [] ])
+                , text "waiting"
+                ]
+
+        OtherPlayersTurn data ->
+            Html.div []
+                [ boardToHtml (data.board |> fenToBoard |> Maybe.withDefault [ [] ])
+                , text "waiting for other player to move"
                 ]
 
 

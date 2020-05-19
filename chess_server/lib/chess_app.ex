@@ -35,8 +35,8 @@ defmodule ChessApp do
     ChessApp.Game.Interface.get_board_state(pid)
   end
 
-  def get_game_state(game_id) do
+  def get_game_state(game_id, player_id) do
     [{pid, _}] = Registry.lookup(ChessApp.Registry, game_id)
-    ChessApp.Game.Interface.get_game_state(pid)
+    ChessApp.Game.Interface.get_game_state(pid, player_id)
   end
 end

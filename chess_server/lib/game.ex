@@ -45,15 +45,17 @@ defmodule ChessApp.Game do
     :binbo.get_fen(pid)
   end
 
-  def get_game_state(%ChessApp.Game{gameServer: pid}) do
+  def get_game_state(player_id, state = %ChessApp.Game{gameServer: pid}) do
     {:ok, fen} = :binbo.get_fen(pid)
     {:ok, legal_moves} =  :binbo.all_legal_moves(pid, :bin)
     {:ok, player_to_move} =  :binbo.side_to_move(pid)
     {:ok, status} =  :binbo.game_status(pid)
+    player_color = get_player_color(player_id, state)
 
     %{board: fen,
       legal_moves: process_legal_moves(legal_moves),
       player_to_move: player_to_move,
+      player_color: player_color,
       status: status,
     }
   end
