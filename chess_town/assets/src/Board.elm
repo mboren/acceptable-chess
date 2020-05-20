@@ -68,7 +68,6 @@ drawSquare size ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSqu
          , Element.padding 0
          , Element.width size
          , Element.height size
-         , Element.inFront (Element.text square)
          ]
             ++ event
         )
