@@ -12,6 +12,9 @@ defmodule ChessApp.Game.Interface do
   def get_player_color(server, player_id) do
     GenServer.call(server, {:get_player_color, player_id})
   end
+  def get_other_player_id(server, player_id) do
+    GenServer.call(server, {:get_other_player_id, player_id})
+  end
 
   def make_move(server, player_id, move) do
     GenServer.call(server, {:make_move, player_id, move})

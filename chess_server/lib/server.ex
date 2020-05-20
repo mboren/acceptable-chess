@@ -24,6 +24,12 @@ defmodule ChessApp.Game.Server do
   end
 
   @impl true
+  def handle_call({:get_other_player_id, player_id}, _from, state) do
+    other_player_id = ChessApp.Game.get_other_player_id(player_id, state)
+    {:reply, other_player_id, state}
+  end
+
+  @impl true
   def handle_call({:make_move, player_id, move}, _from, state) do
     new_state = ChessApp.Game.make_move(player_id, move, state)
     {:reply, new_state, new_state}

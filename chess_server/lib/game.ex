@@ -31,6 +31,14 @@ defmodule ChessApp.Game do
     :black
   end
 
+  def get_other_player_id(player_id, %ChessApp.Game{whitePlayer: player_id, blackPlayer: other_player_id}) do
+    other_player_id
+  end
+  def get_other_player_id(player_id, %ChessApp.Game{whitePlayer: other_player_id, blackPlayer: player_id}) do
+    other_player_id
+  end
+
+
   def make_move(player_id, move, state = %ChessApp.Game{gameServer: pid}) do
     {:ok, color_to_move} = :binbo.side_to_move(pid)
     player_color = get_player_color(player_id, state)

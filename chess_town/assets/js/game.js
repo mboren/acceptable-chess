@@ -10,7 +10,7 @@ let messagesContainer = document.querySelector("#messages")
 // Now that you are connected, you can join channels with a topic:
 let gameId = document.querySelector("#game-id").dataset.gameId;
 let playerId = document.querySelector("#game-id").dataset.playerId;
-let channel = socket.channel("room:" + gameId, {})
+let channel = socket.channel("room:" + gameId + ":" + playerId, {})
 channel.join()
   .receive("ok", resp => { console.log("Joined successfully", resp) })
   .receive("error", resp => { console.log("Unable to join", resp) })
