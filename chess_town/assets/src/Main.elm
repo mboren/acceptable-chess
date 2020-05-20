@@ -23,7 +23,7 @@ port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
 
 type Model
     = WaitingForInitialization
-    | MyTurn { mySide : Player, legalMoves : List Move, board : String, history : List Move, selection : Selection, moveText : String }
+    | MyTurn { mySide : Player, legalMoves : List Move, board : String, history : List Move, selection : Selection }
     | WaitingForMoveToBeAccepted { mySide : Player, legalMoves : List Move, board : String, history : List Move, moveSent : Move }
     | OtherPlayersTurn { mySide : Player, board : String, history : List Move }
 
@@ -31,7 +31,6 @@ type Model
 type Selection
     = SelectingStart
     | SelectingEnd Square
-    | SelectedMove Move
 
 
 type ServerGameStatus
@@ -65,8 +64,6 @@ main =
 
 type Msg
     = GetState Json.Decode.Value
-    | NewMoveText String
-    | SendMove
     | NewSelectedMoveStart Square
     | NewSelectedMoveEnd Square
 
@@ -83,51 +80,14 @@ squareFromChars file rank =
         Nothing
 
 
-squaresFromText : String -> Selection
-squaresFromText text =
-    case String.toList text of
-        [ file, rank ] ->
-            case squareFromChars file rank of
-                Nothing ->
-                    SelectingStart
-
-                Just sq ->
-                    SelectingEnd sq
-
-        [ startFile, startRank, endFile, endRank ] ->
-            case ( squareFromChars startFile startRank, squareFromChars endFile endRank ) of
-                ( Just start, Nothing ) ->
-                    SelectingEnd start
-
-                ( Just start, Just end ) ->
-                    SelectedMove (Move start end)
-
-                _ ->
-                    SelectingStart
-
-        _ ->
-            SelectingStart
-
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NewMoveText text ->
-            case model of
-                MyTurn data ->
-                    let
-                        newSelection =
-                            squaresFromText text
-                    in
-                    ( MyTurn { data | selection = newSelection, moveText = text }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
         NewSelectedMoveStart square ->
             case model of
                 MyTurn data ->
-                    ( MyTurn { data | selection = SelectingEnd square, moveText = square }, Cmd.none )
+                    ( MyTurn { data | selection = SelectingEnd square }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -157,30 +117,6 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
-        SendMove ->
-            case model of
-                MyTurn data ->
-                    let
-                        _ =
-                            Debug.log "sending move from elm" data.moveText
-                    in
-                    case data.selection of
-                        SelectedMove move ->
-                            ( WaitingForMoveToBeAccepted
-                                { mySide = data.mySide
-                                , legalMoves = data.legalMoves
-                                , board = data.board
-                                , history = data.history
-                                , moveSent = move
-                                }
-                            , sendMove move
-                            )
-
-                        _ ->
-                            ( model, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
 
         GetState value ->
             case Json.Decode.decodeValue boardStateDecoder value of
@@ -202,7 +138,6 @@ update msg model =
                                         , board = state.board
                                         , history = state.history
                                         , selection = SelectingStart
-                                        , moveText = ""
                                         }
 
                                 WaitingForMoveToBeAccepted data ->
@@ -213,7 +148,6 @@ update msg model =
                                             , board = state.board
                                             , history = state.history
                                             , selection = SelectingStart
-                                            , moveText = ""
                                             }
 
                                     else
@@ -231,7 +165,6 @@ update msg model =
                                             , board = state.board
                                             , history = state.history
                                             , selection = data.selection
-                                            , moveText = data.moveText
                                             }
 
                                     else
@@ -249,7 +182,6 @@ update msg model =
                                             , board = state.board
                                             , history = state.history
                                             , selection = SelectingStart
-                                            , moveText = ""
                                             }
 
                                     else
@@ -329,12 +261,6 @@ getClickableSquares model =
                     ( ( getSelectablePieces data.legalMoves, NewSelectedMoveStart )
                     , ( getPossibleMoveEndsFromSquare start data.legalMoves, NewSelectedMoveEnd )
                     )
-
-                SelectedMove _ ->
-                    ( ( Set.empty, NewSelectedMoveStart )
-                    , ( Set.empty, NewSelectedMoveEnd )
-                    )
-
         _ ->
             ( ( Set.empty, NewSelectedMoveStart )
             , ( Set.empty, NewSelectedMoveEnd )
@@ -362,13 +288,6 @@ view model =
                             |> fenToBoard
                             |> Maybe.map (\board -> Board.draw board selectablePieces selectableMoves data.mySide data.mySide)
                             |> Maybe.withDefault Element.none
-                        , Element.Input.text []
-                            { onChange = NewMoveText
-                            , text = data.moveText
-                            , placeholder = Nothing
-                            , label = Element.Input.labelAbove [] (Element.text "hello")
-                            }
-                        , Element.Input.button [] { onPress = Just SendMove, label = Element.text "submit" }
                         ]
 
                 WaitingForMoveToBeAccepted data ->
