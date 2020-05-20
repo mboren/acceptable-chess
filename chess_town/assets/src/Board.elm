@@ -46,12 +46,22 @@ draw board ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares,
 drawSquare : Element.Length -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Maybe Piece -> Square -> Element msg
 drawSquare size ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) maybePiece square =
     let
-        color =
+        ( unselectedColor, selectedColor ) =
             if Set.member square whiteSquares then
-                Element.rgb255 237 238 210
+                ( Element.rgb255 237 238 210, Element.rgb255 255 241 0 )
 
             else
-                Element.rgb255 0 150 53
+                ( Element.rgb255 0 150 53, Element.rgb255 255 241 0 )
+
+        color =
+            if Set.member square selectablePieceSquares then
+                selectedColor
+
+            else if Set.member square selectableMoveSquares then
+                selectedColor
+
+            else
+                unselectedColor
 
         event =
             if Set.member square selectablePieceSquares then
