@@ -18,6 +18,16 @@ other player =
             White
 
 
+toString : Player -> String
+toString player =
+    case player of
+        White ->
+            "White"
+
+        Black ->
+            "Black"
+
+
 decode : Decoder Player
 decode =
     string |> Json.Decode.andThen decoderHelp

@@ -26,6 +26,11 @@ type Model
     | MyTurn { mySide : Player, legalMoves : List Move, board : String, history : List Move, selection : Selection }
     | WaitingForMoveToBeAccepted { mySide : Player, legalMoves : List Move, board : String, history : List Move, moveSent : Move }
     | OtherPlayersTurn { mySide : Player, board : String, history : List Move }
+    | GameOver { mySide : Player, board : String, history : List Move, reason : GameOverReason }
+
+
+type GameOverReason
+    = Mate Player
 
 
 type Selection
@@ -80,7 +85,6 @@ squareFromChars file rank =
         Nothing
 
 
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -117,7 +121,6 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
-
         GetState value ->
             case Json.Decode.decodeValue boardStateDecoder value of
                 Err err ->
@@ -128,70 +131,85 @@ update msg model =
                     ( model, Cmd.none )
 
                 Ok state ->
-                    let
-                        newModel =
-                            case model of
-                                WaitingForInitialization ->
-                                    MyTurn
-                                        { mySide = state.yourPlayer
-                                        , legalMoves = state.legalMoves
-                                        , board = state.board
-                                        , history = state.history
-                                        , selection = SelectingStart
-                                        }
+                    case state.status of
+                        Checkmate ->
+                            ( GameOver
+                                { mySide = state.yourPlayer
+                                , board = state.board
+                                , history = state.history
+                                , reason = Mate (Player.other state.playerToMove)
+                                }
+                            , Cmd.none
+                            )
 
-                                WaitingForMoveToBeAccepted data ->
-                                    if data.mySide == state.playerToMove then
-                                        MyTurn
-                                            { mySide = data.mySide
-                                            , legalMoves = state.legalMoves
-                                            , board = state.board
-                                            , history = state.history
-                                            , selection = SelectingStart
-                                            }
+                        Continue ->
+                            let
+                                newModel =
+                                    case model of
+                                        GameOver data ->
+                                            model |> Debug.log "got continue after game over"
 
-                                    else
-                                        OtherPlayersTurn
-                                            { mySide = data.mySide
-                                            , board = state.board
-                                            , history = state.history
-                                            }
+                                        WaitingForInitialization ->
+                                            MyTurn
+                                                { mySide = state.yourPlayer
+                                                , legalMoves = state.legalMoves
+                                                , board = state.board
+                                                , history = state.history
+                                                , selection = SelectingStart
+                                                }
 
-                                MyTurn data ->
-                                    if data.mySide == state.playerToMove then
-                                        MyTurn
-                                            { mySide = data.mySide
-                                            , legalMoves = state.legalMoves
-                                            , board = state.board
-                                            , history = state.history
-                                            , selection = data.selection
-                                            }
+                                        WaitingForMoveToBeAccepted data ->
+                                            if data.mySide == state.playerToMove then
+                                                MyTurn
+                                                    { mySide = data.mySide
+                                                    , legalMoves = state.legalMoves
+                                                    , board = state.board
+                                                    , history = state.history
+                                                    , selection = SelectingStart
+                                                    }
 
-                                    else
-                                        OtherPlayersTurn
-                                            { mySide = data.mySide
-                                            , board = state.board
-                                            , history = state.history
-                                            }
+                                            else
+                                                OtherPlayersTurn
+                                                    { mySide = data.mySide
+                                                    , board = state.board
+                                                    , history = state.history
+                                                    }
 
-                                OtherPlayersTurn data ->
-                                    if data.mySide == state.playerToMove then
-                                        MyTurn
-                                            { mySide = data.mySide
-                                            , legalMoves = state.legalMoves
-                                            , board = state.board
-                                            , history = state.history
-                                            , selection = SelectingStart
-                                            }
+                                        MyTurn data ->
+                                            if data.mySide == state.playerToMove then
+                                                MyTurn
+                                                    { mySide = data.mySide
+                                                    , legalMoves = state.legalMoves
+                                                    , board = state.board
+                                                    , history = state.history
+                                                    , selection = data.selection
+                                                    }
 
-                                    else
-                                        OtherPlayersTurn
-                                            { mySide = data.mySide
-                                            , board = state.board
-                                            , history = state.history
-                                            }
-                    in
-                    ( newModel, Cmd.none )
+                                            else
+                                                OtherPlayersTurn
+                                                    { mySide = data.mySide
+                                                    , board = state.board
+                                                    , history = state.history
+                                                    }
+
+                                        OtherPlayersTurn data ->
+                                            if data.mySide == state.playerToMove then
+                                                MyTurn
+                                                    { mySide = data.mySide
+                                                    , legalMoves = state.legalMoves
+                                                    , board = state.board
+                                                    , history = state.history
+                                                    , selection = SelectingStart
+                                                    }
+
+                                            else
+                                                OtherPlayersTurn
+                                                    { mySide = data.mySide
+                                                    , board = state.board
+                                                    , history = state.history
+                                                    }
+                            in
+                            ( newModel, Cmd.none )
 
 
 boardStateDecoder : Decoder ServerGameState
@@ -261,6 +279,7 @@ getClickableSquares model =
                     ( ( getSelectablePieces data.legalMoves, NewSelectedMoveStart )
                     , ( getPossibleMoveEndsFromSquare start data.legalMoves, NewSelectedMoveEnd )
                     )
+
         _ ->
             ( ( Set.empty, NewSelectedMoveStart )
             , ( Set.empty, NewSelectedMoveEnd )
@@ -278,6 +297,22 @@ view model =
         [ Element.layout
             []
             (case model of
+                GameOver data ->
+                    let
+                        reasonText =
+                            case data.reason of
+                                Mate winner ->
+                                    Player.toString winner ++ " wins!"
+                    in
+                    Element.column
+                        [ Element.width Element.fill ]
+                        [ data.board
+                            |> fenToBoard
+                            |> Maybe.map (\board -> Board.draw board selectablePieces selectableMoves data.mySide data.mySide)
+                            |> Maybe.withDefault Element.none
+                        , Element.text reasonText
+                        ]
+
                 WaitingForInitialization ->
                     Element.text "waiting for state from backend"
 
