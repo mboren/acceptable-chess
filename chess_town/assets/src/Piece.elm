@@ -99,3 +99,23 @@ toString { kind, player } =
 
         ( Queen, White ) ->
             "Q"
+
+pieceKindToString pk =
+    case pk of
+        Pawn ->
+            "p"
+
+        Rook ->
+            "r"
+
+        Knight ->
+            "n"
+
+        Bishop ->
+            "b"
+
+        King ->
+            "k"
+
+        Queen ->
+            "q"
