@@ -18,7 +18,7 @@ blackSquares =
 
 
 draw : List (List (Maybe Piece)) -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Player -> Element msg
-draw board ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) playerToMove currentPlayer =
+draw board ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) currentPlayer playerToMove =
     let
         files =
             [ "a", "b", "c", "d", "e", "f", "g", "h" ]
