@@ -1,15 +1,20 @@
 port module Main exposing (..)
 
-import Browser
-import Html exposing (Html, text)
-import Html.Attributes
-import Html.Events
-import Json.Decode exposing (Decoder, field, string, succeed)
+import Board
+import Browser exposing (Document)
+import Element
+import Element.Input
+import Json.Decode exposing (Decoder, field, string)
+import Move exposing (Move)
 import Piece exposing (Piece)
 import Player exposing (Player)
+import Set exposing (Set)
+import Square exposing (Square)
 
 
 port sendMessage : String -> Cmd msg
+
+
 port sendMove : Move -> Cmd msg
 
 
@@ -27,14 +32,6 @@ type Selection
     = SelectingStart
     | SelectingEnd Square
     | SelectedMove Move
-
-
-type alias Move =
-    { start : Square, end : Square }
-
-
-type alias Square =
-    String
 
 
 type ServerGameStatus
@@ -58,7 +55,7 @@ init _ =
 
 main : Program () Model Msg
 main =
-    Browser.element
+    Browser.document
         { init = init
         , view = view
         , update = update
@@ -70,6 +67,8 @@ type Msg
     = GetState Json.Decode.Value
     | NewMoveText String
     | SendMove
+    | NewSelectedMoveStart Square
+    | NewSelectedMoveEnd Square
 
 
 squareFromChars : Char -> Char -> Maybe Square
@@ -125,6 +124,39 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        NewSelectedMoveStart square ->
+            case model of
+                MyTurn data ->
+                    ( MyTurn { data | selection = SelectingEnd square, moveText = square }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        NewSelectedMoveEnd end ->
+            case model of
+                MyTurn data ->
+                    case data.selection of
+                        SelectingEnd start ->
+                            let
+                                move =
+                                    Move start end
+                            in
+                            ( WaitingForMoveToBeAccepted
+                                { mySide = data.mySide
+                                , legalMoves = data.legalMoves
+                                , board = data.board
+                                , history = data.history
+                                , moveSent = move
+                                }
+                            , sendMove move
+                            )
+
+                        _ ->
+                            ( model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
         SendMove ->
             case model of
                 MyTurn data ->
@@ -134,7 +166,13 @@ update msg model =
                     in
                     case data.selection of
                         SelectedMove move ->
-                            ( WaitingForMoveToBeAccepted { mySide = data.mySide, legalMoves = data.legalMoves, board = data.board, history = data.history, moveSent = move }
+                            ( WaitingForMoveToBeAccepted
+                                { mySide = data.mySide
+                                , legalMoves = data.legalMoves
+                                , board = data.board
+                                , history = data.history
+                                , moveSent = move
+                                }
                             , sendMove move
                             )
 
@@ -264,30 +302,97 @@ subscriptions model =
     messageReceiver GetState
 
 
-view : Model -> Html Msg
-view model =
+getSelectablePieces : List Move -> Set Square
+getSelectablePieces moves =
+    List.map .start moves
+        |> Set.fromList
+
+
+getPossibleMoveEndsFromSquare : Square -> List Move -> Set Square
+getPossibleMoveEndsFromSquare start moves =
+    List.filter (\move -> move.start == start) moves
+        |> List.map .end
+        |> Set.fromList
+
+
+getClickableSquares : Model -> ( ( Set Square, Square -> Msg ), ( Set Square, Square -> Msg ) )
+getClickableSquares model =
     case model of
-        WaitingForInitialization ->
-            text "waiting for state from backend"
-
         MyTurn data ->
-            Html.div []
-                [ boardToHtml (data.board |> fenToBoard |> Maybe.withDefault [ [] ])
-                , Html.input [ Html.Attributes.value data.moveText, Html.Events.onInput NewMoveText ] []
-                , Html.button [ Html.Events.onClick SendMove ] [ text "submit" ]
-                ]
+            case data.selection of
+                SelectingStart ->
+                    ( ( getSelectablePieces data.legalMoves, NewSelectedMoveStart )
+                    , ( Set.empty, NewSelectedMoveEnd )
+                    )
 
-        WaitingForMoveToBeAccepted data ->
-            Html.div []
-                [ boardToHtml (data.board |> fenToBoard |> Maybe.withDefault [ [] ])
-                , text "waiting"
-                ]
+                SelectingEnd start ->
+                    ( ( getSelectablePieces data.legalMoves, NewSelectedMoveStart )
+                    , ( getPossibleMoveEndsFromSquare start data.legalMoves, NewSelectedMoveEnd )
+                    )
 
-        OtherPlayersTurn data ->
-            Html.div []
-                [ boardToHtml (data.board |> fenToBoard |> Maybe.withDefault [ [] ])
-                , text "waiting for other player to move"
-                ]
+                SelectedMove _ ->
+                    ( ( Set.empty, NewSelectedMoveStart )
+                    , ( Set.empty, NewSelectedMoveEnd )
+                    )
+
+        _ ->
+            ( ( Set.empty, NewSelectedMoveStart )
+            , ( Set.empty, NewSelectedMoveEnd )
+            )
+
+
+view : Model -> Document Msg
+view model =
+    let
+        ( selectablePieces, selectableMoves ) =
+            getClickableSquares model
+    in
+    { title = "chess"
+    , body =
+        [ Element.layout
+            []
+            (case model of
+                WaitingForInitialization ->
+                    Element.text "waiting for state from backend"
+
+                MyTurn data ->
+                    Element.column
+                        [ Element.width Element.fill ]
+                        [ data.board
+                            |> fenToBoard
+                            |> Maybe.map (\board -> Board.draw board selectablePieces selectableMoves data.mySide data.mySide)
+                            |> Maybe.withDefault Element.none
+                        , Element.Input.text []
+                            { onChange = NewMoveText
+                            , text = data.moveText
+                            , placeholder = Nothing
+                            , label = Element.Input.labelAbove [] (Element.text "hello")
+                            }
+                        , Element.Input.button [] { onPress = Just SendMove, label = Element.text "submit" }
+                        ]
+
+                WaitingForMoveToBeAccepted data ->
+                    Element.column
+                        [ Element.width Element.fill ]
+                        [ data.board
+                            |> fenToBoard
+                            |> Maybe.map (\board -> Board.draw board selectablePieces selectableMoves data.mySide data.mySide)
+                            |> Maybe.withDefault Element.none
+                        , Element.text "waiting"
+                        ]
+
+                OtherPlayersTurn data ->
+                    Element.column
+                        [ Element.width Element.fill ]
+                        [ data.board
+                            |> fenToBoard
+                            |> Maybe.map (\board -> Board.draw board selectablePieces selectableMoves data.mySide (Player.other data.mySide))
+                            |> Maybe.withDefault Element.none
+                        , Element.text "waiting for other player to move"
+                        ]
+            )
+        ]
+    }
 
 
 fenToBoard : String -> Maybe (List (List (Maybe Piece)))
@@ -327,16 +432,3 @@ replaceNumbers processed unprocessed =
 
             else
                 replaceNumbers (processed ++ String.fromChar head) tail
-
-
-boardToHtml : List (List (Maybe Piece)) -> Html Msg
-boardToHtml board =
-    Html.pre [] [ Html.text (boardToText board) ]
-
-
-boardToText board =
-    board
-        |> List.map (List.map (Maybe.map Piece.toString))
-        |> List.map (List.map (Maybe.withDefault "-"))
-        |> List.map (String.join "")
-        |> String.join "\n"
