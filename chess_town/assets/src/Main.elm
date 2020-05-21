@@ -3,7 +3,6 @@ port module Main exposing (..)
 import Board
 import Browser exposing (Document)
 import Element
-import Element.Input
 import Json.Decode exposing (Decoder, field, string)
 import Move exposing (Move)
 import Piece exposing (Piece)
@@ -71,18 +70,6 @@ type Msg
     = GetState Json.Decode.Value
     | NewSelectedMoveStart Square
     | NewSelectedMoveEnd Square
-
-
-squareFromChars : Char -> Char -> Maybe Square
-squareFromChars file rank =
-    if
-        List.member file [ 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' ]
-            && List.member rank [ '1', '2', '3', '4', '5', '6', '7', '8' ]
-    then
-        Just (String.fromList [ file, rank ])
-
-    else
-        Nothing
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
