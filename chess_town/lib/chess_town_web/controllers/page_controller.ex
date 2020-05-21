@@ -4,9 +4,6 @@ defmodule ChessTownWeb.PageController do
   def index(conn, _params) do
     render(conn, "index.html")
   end
-  def elm_index(conn, _params) do
-    render(conn, "wow.html")
-  end
 
   def new_game(conn, _params) do
     player_id = ChessApp.get_player_id()

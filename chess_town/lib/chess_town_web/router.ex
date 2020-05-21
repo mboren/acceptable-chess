@@ -22,9 +22,6 @@ defmodule ChessTownWeb.Router do
     get  "/:game_id/join", PageController, :join_game
 
     post "/", PageController, :new_game
-
-    get "/elm", PageController, :elm_index
-
   end
 
   # Other scopes may use custom stacks.
