@@ -9,6 +9,57 @@ import Set exposing (Set)
 import Square exposing (Square)
 
 
+type alias Board =
+    List (List (Maybe Piece))
+
+
+drawFromFen : String -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Element msg -> Element msg
+drawFromFen fen selectablePieces selectableMoves bottomPlayer errorElement =
+    fen
+        |> fenToBoard
+        |> Maybe.map (\board -> draw board selectablePieces selectableMoves bottomPlayer)
+        |> Maybe.withDefault errorElement
+
+
+fenToBoard : String -> Maybe Board
+fenToBoard fen =
+    case getPositionPart fen of
+        Nothing ->
+            Nothing
+
+        Just text ->
+            text
+                |> String.split "/"
+                |> List.map rowToPieces
+                |> Just
+
+
+getPositionPart fen =
+    String.split " " fen
+        |> List.head
+
+
+rowToPieces row =
+    row
+        |> replaceNumbers ""
+        |> String.toList
+        |> List.map Piece.fromChar
+
+
+replaceNumbers : String -> String -> String
+replaceNumbers processed unprocessed =
+    case String.uncons unprocessed of
+        Nothing ->
+            processed
+
+        Just ( head, tail ) ->
+            if Char.isDigit head then
+                replaceNumbers (processed ++ String.repeat (Maybe.withDefault 0 (String.toInt (String.fromChar head))) "_") tail
+
+            else
+                replaceNumbers (processed ++ String.fromChar head) tail
+
+
 whiteSquares =
     Set.fromList [ "e6", "c8", "h7", "c4", "b1", "h3", "d7", "f3", "b7", "f1", "a4", "b3", "c6", "e4", "b5", "h1", "d1", "d3", "f7", "e8", "g6", "g4", "g8", "a6", "c2", "d5", "g2", "a2", "e2", "a8", "f5", "h5" ]
 
@@ -17,8 +68,8 @@ blackSquares =
     Set.fromList [ "e7", "c7", "d8", "a5", "a7", "e1", "f4", "d2", "g1", "h8", "e3", "g5", "g7", "a3", "b8", "h4", "f8", "e5", "h2", "f2", "a1", "b4", "d4", "c3", "h6", "g3", "c1", "f6", "c5", "b2", "d6", "b6" ]
 
 
-draw : List (List (Maybe Piece)) -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Player -> Element msg
-draw board ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) currentPlayer playerToMove =
+draw : Board -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Element msg
+draw board ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) currentPlayer =
     let
         files =
             [ "a", "b", "c", "d", "e", "f", "g", "h" ]

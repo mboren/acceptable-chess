@@ -258,10 +258,7 @@ view model =
                     in
                     Element.column
                         [ Element.width Element.fill ]
-                        [ data.board
-                            |> fenToBoard
-                            |> Maybe.map (\board -> Board.draw board selectablePieces selectableMoves data.mySide data.mySide)
-                            |> Maybe.withDefault Element.none
+                        [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
                         , Element.text reasonText
                         ]
 
@@ -271,70 +268,22 @@ view model =
                 MyTurn data ->
                     Element.column
                         [ Element.width Element.fill ]
-                        [ data.board
-                            |> fenToBoard
-                            |> Maybe.map (\board -> Board.draw board selectablePieces selectableMoves data.mySide data.mySide)
-                            |> Maybe.withDefault Element.none
+                        [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
                         ]
 
                 WaitingForMoveToBeAccepted data ->
                     Element.column
                         [ Element.width Element.fill ]
-                        [ data.board
-                            |> fenToBoard
-                            |> Maybe.map (\board -> Board.draw board selectablePieces selectableMoves data.mySide data.mySide)
-                            |> Maybe.withDefault Element.none
+                        [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
                         , Element.text "waiting"
                         ]
 
                 OtherPlayersTurn data ->
                     Element.column
                         [ Element.width Element.fill ]
-                        [ data.board
-                            |> fenToBoard
-                            |> Maybe.map (\board -> Board.draw board selectablePieces selectableMoves data.mySide (Player.other data.mySide))
-                            |> Maybe.withDefault Element.none
+                        [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
                         , Element.text "waiting for other player to move"
                         ]
             )
         ]
     }
-
-
-fenToBoard : String -> Maybe (List (List (Maybe Piece)))
-fenToBoard fen =
-    case getPositionPart fen of
-        Nothing ->
-            Nothing
-
-        Just text ->
-            text
-                |> String.split "/"
-                |> List.map rowToPieces
-                |> Just
-
-
-getPositionPart fen =
-    String.split " " fen
-        |> List.head
-
-
-rowToPieces row =
-    row
-        |> replaceNumbers ""
-        |> String.toList
-        |> List.map Piece.fromChar
-
-
-replaceNumbers : String -> String -> String
-replaceNumbers processed unprocessed =
-    case String.uncons unprocessed of
-        Nothing ->
-            processed
-
-        Just ( head, tail ) ->
-            if Char.isDigit head then
-                replaceNumbers (processed ++ String.repeat (Maybe.withDefault 0 (String.toInt (String.fromChar head))) "_") tail
-
-            else
-                replaceNumbers (processed ++ String.fromChar head) tail
