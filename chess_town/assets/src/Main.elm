@@ -41,7 +41,7 @@ type Selection
 
 type ServerGameStatus
     = Continue
-    | Checkmate
+    | Over GameOverReason
 
 
 type alias ServerGameState =
@@ -51,7 +51,6 @@ type alias ServerGameState =
     , yourPlayer : Player -- TODO I don't like this naming
     , legalMoves : List Move
     , history : List Move
-    , winner : Maybe Player
     }
 
 
@@ -126,95 +125,133 @@ update msg model =
 
                 Ok state ->
                     case state.status of
-                        Checkmate ->
-                            ( GameOver
-                                { mySide = state.yourPlayer
-                                , board = state.board
-                                , history = state.history
-                                , reason = Mate (Player.other state.playerToMove)
-                                }
-                            , Cmd.none
-                            )
-
-                        Continue ->
-                            case state.winner of
-                                Just player ->
+                        Over reason ->
+                            case reason of
+                                Mate winner ->
                                     ( GameOver
                                         { mySide = state.yourPlayer
                                         , board = state.board
                                         , history = state.history
-                                        , reason = Resignation player
+                                        , reason = Mate winner
                                         }
                                     , Cmd.none
                                     )
-                                Nothing ->
-                                    let
-                                        selection =
-                                            case model of
-                                                MyTurn data ->
-                                                    data.selection
 
-                                                _ ->
-                                                    SelectingStart
+                                Resignation winner ->
+                                    ( GameOver
+                                        { mySide = state.yourPlayer
+                                        , board = state.board
+                                        , history = state.history
+                                        , reason = Resignation winner
+                                        }
+                                    , Cmd.none
+                                    )
 
-                                        newModel =
-                                            case model of
-                                                GameOver _ ->
-                                                    model |> Debug.log "got continue after game over"
+                        Continue ->
+                            let
+                                selection =
+                                    case model of
+                                        MyTurn data ->
+                                            data.selection
 
-                                                _ ->
-                                                    if state.yourPlayer == state.playerToMove then
-                                                        MyTurn
-                                                            { mySide = state.yourPlayer
-                                                            , legalMoves = state.legalMoves
-                                                            , board = state.board
-                                                            , history = state.history
-                                                            , selection = selection
-                                                            }
+                                        _ ->
+                                            SelectingStart
 
-                                                    else
-                                                        OtherPlayersTurn
-                                                            { mySide = state.yourPlayer
-                                                            , board = state.board
-                                                            , history = state.history
-                                                            }
-                                    in
-                                    ( newModel, Cmd.none )
+                                newModel =
+                                    case model of
+                                        GameOver _ ->
+                                            model |> Debug.log "got continue after game over"
+
+                                        _ ->
+                                            if state.yourPlayer == state.playerToMove then
+                                                MyTurn
+                                                    { mySide = state.yourPlayer
+                                                    , legalMoves = state.legalMoves
+                                                    , board = state.board
+                                                    , history = state.history
+                                                    , selection = selection
+                                                    }
+
+                                            else
+                                                OtherPlayersTurn
+                                                    { mySide = state.yourPlayer
+                                                    , board = state.board
+                                                    , history = state.history
+                                                    }
+                            in
+                            ( newModel, Cmd.none )
 
 
 boardStateDecoder : Decoder ServerGameState
 boardStateDecoder =
-    Json.Decode.map7 ServerGameState
+    Json.Decode.map7 RawServerGameState
         (field "board" string)
-        (field "status" gameStatusDecoder)
+        (field "status" string)
         (field "player_to_move" Player.decode)
         (field "player_color" Player.decode)
         (field "legal_moves" (Json.Decode.list moveDecoder))
         (field "history" (Json.Decode.list moveDecoder))
-        (field "winner" ((Json.Decode.nullable Player.decode)))
+        (field "winner" (Json.Decode.nullable Player.decode))
+        |> Json.Decode.andThen validateDecodedState
+
+
+type alias RawServerGameState =
+    { board : String
+    , status : String
+    , playerToMove : Player
+    , yourPlayer : Player
+    , legalMoves : List Move
+    , history : List Move
+    , winner : Maybe Player
+    }
+
+
+validateDecodedState : RawServerGameState -> Decoder ServerGameState
+validateDecodedState state =
+    let
+        newStatusResult =
+            case ( state.status, state.winner ) of
+                ( "continue", Nothing ) ->
+                    Ok Continue
+
+                ( "continue", Just winner ) ->
+                    Err ("Inconsistency in state from server: status is Continue, but winner is " ++ Player.toString winner)
+
+                ( "resignation", Just winner ) ->
+                    Ok (Over (Resignation winner))
+
+                ( "resignation", Nothing ) ->
+                    Err "Inconsistency in state from server: status is resigned, but winner is null"
+
+                ( "checkmate", Just winner ) ->
+                    Ok (Over (Mate winner))
+
+                ( "checkmate", Nothing ) ->
+                    Err "Inconsistency in state from server: status is checkmate, but winner is null"
+
+                _ ->
+                    Err "Unknown status response"
+    in
+    case newStatusResult of
+        Ok newStatus ->
+            Json.Decode.succeed
+                { board = state.board
+                , status = newStatus
+                , playerToMove = state.playerToMove
+                , yourPlayer = state.yourPlayer
+                , legalMoves = state.legalMoves
+                , history = state.history
+                }
+
+        Err message ->
+            Json.Decode.fail message
+
 
 moveDecoder : Decoder { start : String, end : String }
 moveDecoder =
     Json.Decode.map2 (\start end -> { start = start, end = end })
         (field "start" string)
         (field "end" string)
-
-
-gameStatusDecoder : Decoder ServerGameStatus
-gameStatusDecoder =
-    string |> Json.Decode.andThen gameStatusDecoderHelp
-
-
-gameStatusDecoderHelp s =
-    case s of
-        "continue" ->
-            Json.Decode.succeed Continue
-
-        "checkmate" ->
-            Json.Decode.succeed Checkmate
-
-        _ ->
-            Json.Decode.fail ("Unhandled status: " ++ s)
 
 
 subscriptions : Model -> Sub Msg

@@ -47,10 +47,6 @@ defmodule ChessApp.Game do
     other_player_id
   end
 
-  def make_move(player_id, move, state = %ChessApp.Game{gameServer: pid, playerResigned: player}) do
-    state
-  end
-
   def make_move(player_id, move, state = %ChessApp.Game{gameServer: pid, playerResigned: nil}) do
     {:ok, color_to_move} = :binbo.side_to_move(pid)
     player_color = get_player_color(player_id, state)
@@ -59,6 +55,10 @@ defmodule ChessApp.Game do
     else
       state
     end
+  end
+
+  def make_move(player_id, move, state = %ChessApp.Game{gameServer: pid, playerResigned: player}) do
+    state
   end
 
   defp add_move_to_history({:ok, _}, move, state) do
@@ -76,7 +76,7 @@ defmodule ChessApp.Game do
     {:ok, fen} = :binbo.get_fen(pid)
     {:ok, legal_moves} =  :binbo.all_legal_moves(pid, :bin)
     {:ok, player_to_move} =  :binbo.side_to_move(pid)
-    {:ok, status} =  :binbo.game_status(pid)
+    {:ok, status} =  get_game_status(state)
     player_color = get_player_color(player_id, state)
 
     %{board: fen,
@@ -87,6 +87,14 @@ defmodule ChessApp.Game do
       winner: get_winner(status, player_to_move, state),
       history: history,
     }
+  end
+
+  defp get_game_status(%ChessApp.Game{gameServer: pid, playerResigned: nil}) do
+    :binbo.game_status(pid)
+  end
+
+  defp get_game_status(%ChessApp.Game{gameServer: pid, playerResigned: player}) do
+    {:ok, :resignation}
   end
 
   defp get_winner(:continue, _player_to_move, %ChessApp.Game{playerResigned: nil}) do
