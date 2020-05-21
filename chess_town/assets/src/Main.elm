@@ -2,7 +2,8 @@ port module Main exposing (..)
 
 import Board
 import Browser exposing (Document)
-import Element
+import Element exposing (Element)
+import Element.Input
 import Json.Decode exposing (Decoder, field, string)
 import Move exposing (Move)
 import Piece exposing (Piece)
@@ -30,6 +31,7 @@ type Model
 
 type GameOverReason
     = Mate Player
+    | Resignation Player
 
 
 type Selection
@@ -49,6 +51,7 @@ type alias ServerGameState =
     , yourPlayer : Player -- TODO I don't like this naming
     , legalMoves : List Move
     , history : List Move
+    , winner : Maybe Player
     }
 
 
@@ -70,6 +73,7 @@ type Msg
     = GetState Json.Decode.Value
     | NewSelectedMoveStart Square
     | NewSelectedMoveEnd Square
+    | Resign
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -108,6 +112,9 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        Resign ->
+            ( model, sendMessage "resign" )
+
         GetState value ->
             case Json.Decode.decodeValue boardStateDecoder value of
                 Err err ->
@@ -130,50 +137,61 @@ update msg model =
                             )
 
                         Continue ->
-                            let
-                                selection =
-                                    case model of
-                                        MyTurn data ->
-                                            data.selection
+                            case state.winner of
+                                Just player ->
+                                    ( GameOver
+                                        { mySide = state.yourPlayer
+                                        , board = state.board
+                                        , history = state.history
+                                        , reason = Resignation player
+                                        }
+                                    , Cmd.none
+                                    )
+                                Nothing ->
+                                    let
+                                        selection =
+                                            case model of
+                                                MyTurn data ->
+                                                    data.selection
 
-                                        _ ->
-                                            SelectingStart
+                                                _ ->
+                                                    SelectingStart
 
-                                newModel =
-                                    case model of
-                                        GameOver _ ->
-                                            model |> Debug.log "got continue after game over"
+                                        newModel =
+                                            case model of
+                                                GameOver _ ->
+                                                    model |> Debug.log "got continue after game over"
 
-                                        _ ->
-                                            if state.yourPlayer == state.playerToMove then
-                                                MyTurn
-                                                    { mySide = state.yourPlayer
-                                                    , legalMoves = state.legalMoves
-                                                    , board = state.board
-                                                    , history = state.history
-                                                    , selection = selection
-                                                    }
+                                                _ ->
+                                                    if state.yourPlayer == state.playerToMove then
+                                                        MyTurn
+                                                            { mySide = state.yourPlayer
+                                                            , legalMoves = state.legalMoves
+                                                            , board = state.board
+                                                            , history = state.history
+                                                            , selection = selection
+                                                            }
 
-                                            else
-                                                OtherPlayersTurn
-                                                    { mySide = state.yourPlayer
-                                                    , board = state.board
-                                                    , history = state.history
-                                                    }
-                            in
-                            ( newModel, Cmd.none )
+                                                    else
+                                                        OtherPlayersTurn
+                                                            { mySide = state.yourPlayer
+                                                            , board = state.board
+                                                            , history = state.history
+                                                            }
+                                    in
+                                    ( newModel, Cmd.none )
 
 
 boardStateDecoder : Decoder ServerGameState
 boardStateDecoder =
-    Json.Decode.map6 ServerGameState
+    Json.Decode.map7 ServerGameState
         (field "board" string)
         (field "status" gameStatusDecoder)
         (field "player_to_move" Player.decode)
         (field "player_color" Player.decode)
         (field "legal_moves" (Json.Decode.list moveDecoder))
         (field "history" (Json.Decode.list moveDecoder))
-
+        (field "winner" ((Json.Decode.nullable Player.decode)))
 
 moveDecoder : Decoder { start : String, end : String }
 moveDecoder =
@@ -255,6 +273,9 @@ view model =
                             case data.reason of
                                 Mate winner ->
                                     Player.toString winner ++ " wins!"
+
+                                Resignation winner ->
+                                    Player.toString winner ++ " wins by resignation"
                     in
                     Element.column
                         [ Element.width Element.fill ]
@@ -269,6 +290,7 @@ view model =
                     Element.column
                         [ Element.width Element.fill ]
                         [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+                        , resignButton
                         ]
 
                 WaitingForMoveToBeAccepted data ->
@@ -276,6 +298,7 @@ view model =
                         [ Element.width Element.fill ]
                         [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
                         , Element.text "waiting"
+                        , resignButton
                         ]
 
                 OtherPlayersTurn data ->
@@ -283,7 +306,13 @@ view model =
                         [ Element.width Element.fill ]
                         [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
                         , Element.text "waiting for other player to move"
+                        , resignButton
                         ]
             )
         ]
     }
+
+
+resignButton : Element Msg
+resignButton =
+    Element.Input.button [] { onPress = Just Resign, label = Element.text "Offer resignation" }

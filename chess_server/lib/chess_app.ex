@@ -26,6 +26,11 @@ defmodule ChessApp do
     ChessApp.Game.Interface.join_game(pid, player_id)
   end
 
+  def resign(game_id, player_id) do
+    [{pid, _}] = Registry.lookup(ChessApp.Registry, game_id)
+    ChessApp.Game.Interface.resign(pid, player_id)
+  end
+
   def make_move(game_id, player_id, move) do
     [{pid, _}] = Registry.lookup(ChessApp.Registry, game_id)
     ChessApp.Game.Interface.make_move(pid, player_id, move)

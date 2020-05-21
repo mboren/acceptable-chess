@@ -15,6 +15,15 @@ defmodule ChessTownWeb.RoomChannel do
     {:noreply, socket}
   end
 
+  def handle_in("resign", %{"game_id" => game_id, "player_id" => player_id}, socket) do
+    ChessApp.resign(deserialize(game_id), deserialize(player_id))
+    game_state = ChessApp.get_game_state(deserialize(game_id), deserialize(player_id))
+    broadcast!(socket, "game_state", %{body: game_state})
+    other_player_id = ChessApp.get_other_player_id(deserialize(game_id), deserialize(player_id))
+    send_player_updated_state(socket, game_id, serialize(other_player_id))
+    {:noreply, socket}
+  end
+
   def handle_in("move", %{"game_id" => game_id, "player_id" => player_id, "move" => move_text}, socket) do
     ChessApp.make_move(deserialize(game_id), deserialize(player_id), move_text)
     game_state = ChessApp.get_game_state(deserialize(game_id), deserialize(player_id))

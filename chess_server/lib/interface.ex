@@ -5,6 +5,10 @@ defmodule ChessApp.Game.Interface do
     GenServer.call(server, {:join_game, player_id})
   end
 
+  def resign(server, player_id) do
+    GenServer.call(server, {:resign, player_id})
+  end
+
   def get_players(server) do
     GenServer.call(server, {:get_players})
   end

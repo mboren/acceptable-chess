@@ -23,6 +23,11 @@ defmodule ChessApp.Game.Server do
     {:reply, color, state}
   end
 
+  def handle_call({:resign, player_id}, _from, state) do
+    new_state = ChessApp.Game.resign(player_id, state)
+    {:reply, :ok, new_state}
+  end
+
   @impl true
   def handle_call({:get_other_player_id, player_id}, _from, state) do
     other_player_id = ChessApp.Game.get_other_player_id(player_id, state)

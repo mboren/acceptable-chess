@@ -3,13 +3,22 @@ defmodule ChessApp.Game do
     gameServer: nil,
     whitePlayer: nil,
     blackPlayer: nil,
-    history: []
+    history: [],
+    playerResigned: nil
   )
 
   def new_game() do
     {:ok, pid} = :binbo.new_server()
     :binbo.new_game(pid)
     %ChessApp.Game{gameServer: pid, history: []}
+  end
+
+  def resign(player_id, state = %ChessApp.Game{gameServer: pid, playerResigned: nil, whitePlayer: player_id}) do
+    Map.put(state, :playerResigned, :white)
+  end
+
+  def resign(player_id, state = %ChessApp.Game{gameServer: pid, playerResigned: nil, blackPlayer: player_id}) do
+    Map.put(state, :playerResigned, :black)
   end
 
   def add_player_to_game(player_id, state = %ChessApp.Game{gameServer: _pid, whitePlayer: nil, blackPlayer: _player}) do
@@ -38,8 +47,11 @@ defmodule ChessApp.Game do
     other_player_id
   end
 
+  def make_move(player_id, move, state = %ChessApp.Game{gameServer: pid, playerResigned: player}) do
+    state
+  end
 
-  def make_move(player_id, move, state = %ChessApp.Game{gameServer: pid}) do
+  def make_move(player_id, move, state = %ChessApp.Game{gameServer: pid, playerResigned: nil}) do
     {:ok, color_to_move} = :binbo.side_to_move(pid)
     player_color = get_player_color(player_id, state)
     if color_to_move == player_color do
@@ -72,8 +84,29 @@ defmodule ChessApp.Game do
       player_to_move: player_to_move,
       player_color: player_color,
       status: status,
+      winner: get_winner(status, player_to_move, state),
       history: history,
     }
+  end
+
+  defp get_winner(:continue, _player_to_move, %ChessApp.Game{playerResigned: nil}) do
+    nil
+  end
+
+  defp get_winner(:checkmate, player_to_move = :white, %ChessApp.Game{playerResigned: nil}) do
+    :black
+  end
+
+  defp get_winner(:checkmate, player_to_move = :black, %ChessApp.Game{playerResigned: nil}) do
+    :white
+  end
+
+  defp get_winner(_status, _player_to_move, %ChessApp.Game{playerResigned: :white}) do
+    :black
+  end
+
+  defp get_winner(_status, _player_to_move, %ChessApp.Game{playerResigned: :black}) do
+    :white
   end
 
   def process_legal_moves(moves) do

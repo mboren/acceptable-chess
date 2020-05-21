@@ -41,12 +41,7 @@ channel.on("game_state", payload => {
 
 app.ports.sendMessage.subscribe(function (message) {
     console.log("message from elm: ", message)
-    if(message === "ready") {
-        console.log("got ready from elm")
-        channel.push("ready", {game_id: gameId, player_id: playerId})
-    } else {
-        channel.push("move", {game_id: gameId, player_id: playerId, move: message})
-    }
+    channel.push(message, {game_id: gameId, player_id: playerId})
 })
 
 app.ports.sendMove.subscribe(function (message) {
