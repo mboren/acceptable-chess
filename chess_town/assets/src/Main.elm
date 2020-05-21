@@ -144,69 +144,27 @@ update msg model =
 
                         Continue ->
                             let
+                                selection =
+                                    case model of
+                                        MyTurn data ->
+                                            data.selection
+
+                                        _ ->
+                                            SelectingStart
+
                                 newModel =
                                     case model of
                                         GameOver _ ->
                                             model |> Debug.log "got continue after game over"
 
-                                        WaitingForInitialization ->
+                                        _ ->
                                             if state.yourPlayer == state.playerToMove then
                                                 MyTurn
                                                     { mySide = state.yourPlayer
                                                     , legalMoves = state.legalMoves
                                                     , board = state.board
                                                     , history = state.history
-                                                    , selection = SelectingStart
-                                                    }
-                                            else
-                                                OtherPlayersTurn
-                                                    { mySide = state.yourPlayer
-                                                    , board = state.board
-                                                    , history = state.history
-                                                    }
-
-                                        WaitingForMoveToBeAccepted _ ->
-                                            if state.yourPlayer == state.playerToMove then
-                                                MyTurn
-                                                    { mySide = state.yourPlayer
-                                                    , legalMoves = state.legalMoves
-                                                    , board = state.board
-                                                    , history = state.history
-                                                    , selection = SelectingStart
-                                                    }
-
-                                            else
-                                                OtherPlayersTurn
-                                                    { mySide = state.yourPlayer
-                                                    , board = state.board
-                                                    , history = state.history
-                                                    }
-
-                                        MyTurn data ->
-                                            if state.yourPlayer == state.playerToMove then
-                                                MyTurn
-                                                    { mySide = state.yourPlayer
-                                                    , legalMoves = state.legalMoves
-                                                    , board = state.board
-                                                    , history = state.history
-                                                    , selection = data.selection
-                                                    }
-
-                                            else
-                                                OtherPlayersTurn
-                                                    { mySide = state.yourPlayer
-                                                    , board = state.board
-                                                    , history = state.history
-                                                    }
-
-                                        OtherPlayersTurn _ ->
-                                            if state.yourPlayer == state.playerToMove then
-                                                MyTurn
-                                                    { mySide = state.yourPlayer
-                                                    , legalMoves = state.legalMoves
-                                                    , board = state.board
-                                                    , history = state.history
-                                                    , selection = SelectingStart
+                                                    , selection = selection
                                                     }
 
                                             else
