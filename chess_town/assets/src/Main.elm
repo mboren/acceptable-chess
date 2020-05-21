@@ -146,22 +146,29 @@ update msg model =
                             let
                                 newModel =
                                     case model of
-                                        GameOver data ->
+                                        GameOver _ ->
                                             model |> Debug.log "got continue after game over"
 
                                         WaitingForInitialization ->
-                                            MyTurn
-                                                { mySide = state.yourPlayer
-                                                , legalMoves = state.legalMoves
-                                                , board = state.board
-                                                , history = state.history
-                                                , selection = SelectingStart
-                                                }
-
-                                        WaitingForMoveToBeAccepted data ->
-                                            if data.mySide == state.playerToMove then
+                                            if state.yourPlayer == state.playerToMove then
                                                 MyTurn
-                                                    { mySide = data.mySide
+                                                    { mySide = state.yourPlayer
+                                                    , legalMoves = state.legalMoves
+                                                    , board = state.board
+                                                    , history = state.history
+                                                    , selection = SelectingStart
+                                                    }
+                                            else
+                                                OtherPlayersTurn
+                                                    { mySide = state.yourPlayer
+                                                    , board = state.board
+                                                    , history = state.history
+                                                    }
+
+                                        WaitingForMoveToBeAccepted _ ->
+                                            if state.yourPlayer == state.playerToMove then
+                                                MyTurn
+                                                    { mySide = state.yourPlayer
                                                     , legalMoves = state.legalMoves
                                                     , board = state.board
                                                     , history = state.history
@@ -170,15 +177,15 @@ update msg model =
 
                                             else
                                                 OtherPlayersTurn
-                                                    { mySide = data.mySide
+                                                    { mySide = state.yourPlayer
                                                     , board = state.board
                                                     , history = state.history
                                                     }
 
                                         MyTurn data ->
-                                            if data.mySide == state.playerToMove then
+                                            if state.yourPlayer == state.playerToMove then
                                                 MyTurn
-                                                    { mySide = data.mySide
+                                                    { mySide = state.yourPlayer
                                                     , legalMoves = state.legalMoves
                                                     , board = state.board
                                                     , history = state.history
@@ -187,15 +194,15 @@ update msg model =
 
                                             else
                                                 OtherPlayersTurn
-                                                    { mySide = data.mySide
+                                                    { mySide = state.yourPlayer
                                                     , board = state.board
                                                     , history = state.history
                                                     }
 
-                                        OtherPlayersTurn data ->
-                                            if data.mySide == state.playerToMove then
+                                        OtherPlayersTurn _ ->
+                                            if state.yourPlayer == state.playerToMove then
                                                 MyTurn
-                                                    { mySide = data.mySide
+                                                    { mySide = state.yourPlayer
                                                     , legalMoves = state.legalMoves
                                                     , board = state.board
                                                     , history = state.history
@@ -204,7 +211,7 @@ update msg model =
 
                                             else
                                                 OtherPlayersTurn
-                                                    { mySide = data.mySide
+                                                    { mySide = state.yourPlayer
                                                     , board = state.board
                                                     , history = state.history
                                                     }
