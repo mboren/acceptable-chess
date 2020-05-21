@@ -19,15 +19,18 @@ defmodule ChessTownWeb.PageController do
 
   def play_game(conn, %{"game_id" => game_id}) do
     player_id = get_session(conn, :player_id)
-    {:ok, fen} = ChessApp.get_board_state(deserialize(game_id))
-
-    render(conn, "game.html", %{fen: fen, game_id: game_id, player_id: serialize(player_id)})
+    case ChessApp.get_board_state(deserialize(game_id)) do
+      {:ok, fen} ->
+        render(conn, "game.html", %{fen: fen, game_id: game_id, player_id: serialize(player_id)})
+      {:error, reason} ->
+        conn |> redirect(to: "/chess")
+    end
   end
+
   def join_game(conn, %{"game_id" => game_id}) do
     player_id = ChessApp.get_player_id()
     conn = put_session(conn, :player_id, player_id)
     ChessApp.join_game(deserialize(game_id), player_id)
-
 
     conn |> redirect(to: "/chess/#{game_id}/play")
   end

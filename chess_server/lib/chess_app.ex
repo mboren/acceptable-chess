@@ -5,6 +5,14 @@ defmodule ChessApp do
 
   use Application
 
+  defp get_game_pid(game_id) do
+    case Registry.lookup(ChessApp.Registry, game_id) do
+      [{pid, _}] ->
+        {:ok, pid}
+      [] ->
+        {:error, "invalid game_id"}
+    end
+  end
 
   def start(_type, _arg) do
     children = [{Registry, keys: :unique, name: ChessApp.Registry}]
@@ -21,6 +29,7 @@ defmodule ChessApp do
     game_id
   end
 
+
   def join_game(game_id, player_id) do
     [{pid, _}] = Registry.lookup(ChessApp.Registry, game_id)
     ChessApp.Game.Interface.join_game(pid, player_id)
@@ -35,9 +44,14 @@ defmodule ChessApp do
     [{pid, _}] = Registry.lookup(ChessApp.Registry, game_id)
     ChessApp.Game.Interface.make_move(pid, player_id, move)
   end
+
   def get_board_state(game_id) do
-    [{pid, _}] = Registry.lookup(ChessApp.Registry, game_id)
-    ChessApp.Game.Interface.get_board_state(pid)
+    case get_game_pid(game_id) do
+      {:ok, pid} ->
+        ChessApp.Game.Interface.get_board_state(pid)
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   def get_game_state(game_id, player_id) do
