@@ -29,10 +29,10 @@ defmodule ChessApp do
     game_id
   end
 
-
   def join_game(game_id, player_id) do
-    [{pid, _}] = Registry.lookup(ChessApp.Registry, game_id)
-    ChessApp.Game.Interface.join_game(pid, player_id)
+    with {:ok, pid} <- get_game_pid(game_id) do
+      ChessApp.Game.Interface.join_game(pid, player_id)
+    end
   end
 
   def resign(game_id, player_id) do
