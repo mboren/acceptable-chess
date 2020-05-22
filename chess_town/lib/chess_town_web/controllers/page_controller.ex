@@ -35,14 +35,6 @@ defmodule ChessTownWeb.PageController do
     conn |> redirect(to: "/chess/#{game_id}/play")
   end
 
-  def move(conn, %{"game_id" => game_id, "move" => %{"move_text" => move_text}}) do
-    player_id = get_session(conn, :player_id)
-    ChessApp.make_move(deserialize(game_id), player_id, move_text)
-    {:ok, fen} = ChessApp.get_board_state(deserialize(game_id))
-
-    render(conn, "game.html", %{fen: fen, game_id: game_id, player_id: serialize(player_id)})
-  end
-
   def serialize(term) do
     term
     |> :erlang.term_to_binary()
