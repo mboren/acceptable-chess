@@ -51,15 +51,19 @@ defmodule MoveRepresentation do
       {:ok, %{rank: rank, file: file}}
     end
   end
+
   def is_queenside_castle("K", {"e1", "c1"}) do
     true
   end
+
   def is_queenside_castle("k", {"e8", "c8"}) do
     true
   end
+
   def is_queenside_castle(_piece, {_start_square, _end_square}) do
     false
   end
+
   def is_kingside_castle("K", {"e1", "g1"}) do
     true
   end
