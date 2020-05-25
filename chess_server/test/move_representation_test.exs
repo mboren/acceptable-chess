@@ -47,6 +47,32 @@ defmodule MoveRepresentationTest do
     assert MR.get_san(fen, legal_moves, {"d4", "b5"}) == "Ndb5"
   end
 
+  test "rook moves that need rank to disambiguate" do
+    fen = "1nbqkbn1/1pppppp1/r6r/p6p/P6P/R7/1PPPPPP1/RNBQKBN1 w Q - 0 1"
+    legal_moves = [{"a1", "a2"}, {"a3", "a2"}]
+
+    assert MR.get_san(fen, legal_moves, {"a1", "a2"}) == "R1a2"
+    assert MR.get_san(fen, legal_moves, {"a3", "a2"}) == "R3a2"
+  end
+
+  test "rook moves that need file to disambiguate" do
+    fen = "1nbqkbn1/1pppppp1/r6r/p6p/P6P/R7/1PPPPPP1/RNBQKBN1 b Q - 0 1"
+    legal_moves = [{"a6", "d6"}, {"h6", "d6"}]
+
+    assert MR.get_san(fen, legal_moves, {"a6", "d6"}) == "Rad6"
+    assert MR.get_san(fen, legal_moves, {"h6", "d6"}) == "Rhd6"
+  end
+
+  test "queen moves that need rank and file to disambiguate" do
+      fen = "rnbqkbnr/pppppppp/8/3Q1Q2/8/3Q1Q2/PPPPPPPP/RNB1KBNR w KQkq - 0 1"
+      legal_moves = [{"d3", "e4"}, {"d5", "e4"}, {"f5", "e4"}, {"f3", "e4"}]
+
+      assert MR.get_san(fen, legal_moves, {"d3", "e4"}) == "Qd3e4"
+      assert MR.get_san(fen, legal_moves, {"d5", "e4"}) == "Qd5e4"
+      assert MR.get_san(fen, legal_moves, {"f5", "e4"}) == "Qf5e4"
+      assert MR.get_san(fen, legal_moves, {"f3", "e4"}) == "Qf3e4"
+  end
+
   test "start position FEN to piece list" do
     start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     expected = ["r", "n", "b", "q", "k", "b", "n", "r", "p", "p", "p", "p", "p", "p", "p", "p", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "P", "P", "P", "P", "P", "P", "P", "P", "R", "N", "B", "Q", "K", "B", "N", "R" ]
