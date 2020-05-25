@@ -33,7 +33,7 @@ defmodule MoveRepresentation do
       |> Enum.map(&get_rank_and_file/1)
   end
 
-  def isPawn?(piece) do
+  def is_pawn?(piece) do
     case piece do
       "p" -> true
       "P" -> true
