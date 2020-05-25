@@ -26,8 +26,8 @@ defmodule MoveRepresentation do
   end
 
   def get_move_context(piece, {start_square, end_square}, legal_moves, fen) do
-    squares_to_disambiguate =
-      get_moves_that_end_at(end_square)
+    legal_moves
+      |> get_moves_that_end_at(end_square)
       |> Enum.map (fn {s, e} -> s end)
       |> Enum.filter (fn s -> get_piece_at_square(s, fen) == piece end)
       |> Enum.map(&get_rank_and_file/1)
