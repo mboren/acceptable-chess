@@ -28,11 +28,13 @@ defmodule MoveRepresentation do
     end
   end
 
+  @spec get_moves_that_end_at(square, [move]) :: [move]
   def get_moves_that_end_at(square, moves) do
     moves
     |> Enum.filter(fn {s, e} -> e == square end)
   end
 
+  @spec get_move_context(piece, move, [move], String.t) :: [{:ok, map}]
   def get_move_context(piece, {start_square, end_square}, legal_moves, fen) do
     moves = get_moves_that_end_at(end_square, legal_moves)
         |> MapSet.new()
@@ -84,6 +86,7 @@ defmodule MoveRepresentation do
     end
   end
 
+  @spec get_rank_and_file(square) :: {:ok, map}
   def get_rank_and_file(square) do
     valid_files = MapSet.new(["a", "b", "c", "d", "e", "f", "g", "h"])
     valid_ranks = MapSet.new(["1", "2", "3", "4", "5", "6", "7", "8"])
@@ -95,6 +98,7 @@ defmodule MoveRepresentation do
     end
   end
 
+  @spec is_queenside_castle(piece, move) :: boolean
   def is_queenside_castle("K", {"e1", "c1"}) do
     true
   end
@@ -107,6 +111,7 @@ defmodule MoveRepresentation do
     false
   end
 
+  @spec is_kingside_castle(piece, move) :: boolean
   def is_kingside_castle("K", {"e1", "g1"}) do
     true
   end
@@ -117,6 +122,7 @@ defmodule MoveRepresentation do
     false
   end
 
+  @spec is_straight_pawn_move(piece, file, file) :: boolean
   def is_straight_pawn_move("p", start_file, end_file) when start_file == end_file do
     true
   end
@@ -127,6 +133,7 @@ defmodule MoveRepresentation do
     false
   end
 
+  @spec get_piece_at_square(square, String.t) :: {:ok, piece} | {:error, any}
   def get_piece_at_square(square, fen) do
     piece_list = fen_to_piece_list(fen)
     {:ok, index} = square_to_index(square)
@@ -134,17 +141,19 @@ defmodule MoveRepresentation do
     Enum.fetch(piece_list, index)
   end
 
+  @spec square_to_index(square) :: {:ok, 0..63} | {:error, any}
   def square_to_index(square) do
     with [file, rank] <- String.codepoints(square),
-         {:ok, fileNum} <- file_to_digit(file),
-         {:ok, rankNum} <- char_to_digit(rank)
+         {:ok, file_num} <- file_to_digit(file),
+         {:ok, rank_num} <- char_to_digit(rank)
       do
-      {:ok, 63 - 8 * rankNum + fileNum}
+      {:ok, 63 - 8 * rank_num + file_num}
     else
       foo -> {:error, foo}
     end
   end
 
+  @spec fen_to_piece_list(String.t()) :: [String.t()]
   def fen_to_piece_list(fen) do
     [pieces, _side_to_move, _castling, _enpassant, _halfmove, _fullmove] = String.split(fen, " ")
 
@@ -165,6 +174,7 @@ defmodule MoveRepresentation do
     end
   end
 
+  @spec char_to_digit(String.t()) :: {:ok, 1..8} | {:error, any}
   def char_to_digit(character) do
     case character do
       "1" -> {:ok, 1}
@@ -179,6 +189,7 @@ defmodule MoveRepresentation do
     end
   end
 
+  @spec file_to_digit(String.t()) :: {:ok, 1..8} | {:error, any}
   def file_to_digit(character) do
     case character do
       "a" -> {:ok, 1}
@@ -192,5 +203,4 @@ defmodule MoveRepresentation do
       other -> {:error, other}
     end
   end
-
 end
