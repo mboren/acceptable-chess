@@ -19,10 +19,11 @@ defmodule MoveRepresentation do
       is_queenside_castle(piece, {start_square, end_square}) -> "O-O-O"
       is_kingside_castle(piece, {start_square, end_square}) -> "O-O"
       true ->
+        context = get_disambiguation(piece, start_square, end_square, legal_moves, fen)
         if destination_piece != " " do
-          String.upcase(piece) <> "x" <> end_square
+          String.upcase(piece) <> context <> "x" <> end_square
         else
-          String.upcase(piece) <> end_square
+          String.upcase(piece) <> context <> end_square
         end
     end
   end
@@ -33,11 +34,46 @@ defmodule MoveRepresentation do
   end
 
   def get_move_context(piece, {start_square, end_square}, legal_moves, fen) do
-    legal_moves
-      |> get_moves_that_end_at(end_square)
-      |> Enum.map (fn {s, e} -> s end)
-      |> Enum.filter (fn s -> get_piece_at_square(s, fen) == piece end)
+    moves = get_moves_that_end_at(end_square, legal_moves)
+        |> MapSet.new()
+        |> MapSet.delete({start_square, end_square})
+        |> MapSet.to_list()
+
+    moves
+      |> Enum.map(fn {s, e} -> s end)
+      |> Enum.filter(fn s -> get_piece_at_square(s, fen) == {:ok, piece} end)
       |> Enum.map(&get_rank_and_file/1)
+  end
+
+  @spec get_disambiguation(piece, square, square, [move], String.t) :: String.t
+  def get_disambiguation(piece, start_square, end_square, legal_moves, fen) do
+    {:ok, %{rank: start_rank, file: start_file}} = get_rank_and_file(start_square)
+
+    potentially_ambiguous_squares = get_move_context(piece, {start_square, end_square}, legal_moves, fen)
+      |> Enum.filter(&match?({:ok, _}, &1))
+      |> Enum.map(fn {:ok, rank_and_file} -> rank_and_file end)
+
+    case potentially_ambiguous_squares do
+      [] ->
+        ""
+      _ ->
+        files = Enum.map(potentially_ambiguous_squares, fn %{rank: _, file: f} -> f end) |> MapSet.new
+        ranks = Enum.map(potentially_ambiguous_squares, fn %{rank: r, file: _} -> r end) |> MapSet.new
+
+        determine_context(start_file, start_rank, MapSet.member?(files, start_file), MapSet.member?(ranks, start_rank))
+      end
+  end
+
+  def determine_context(start_file, start_rank, is_file_ambiguous = false, _is_rank_ambiguous) do
+    start_file
+  end
+
+  def determine_context(start_file, start_rank, is_file_ambiguous = true, is_rank_ambiguous = false) do
+    start_rank
+  end
+
+  def determine_context(start_file, start_rank, is_file_ambiguous = true, is_rank_ambiguous = true) do
+    start_file <> start_rank
   end
 
   def is_pawn?(piece) do

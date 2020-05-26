@@ -84,7 +84,7 @@ defmodule MoveRepresentationTest do
     assert MR.fen_to_piece_list(fen)  == expected
   end
 
-  test "get piece at index" do
+  test "get piece at square for starting position" do
     fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     assert MR.get_piece_at_square("a1", fen) == {:ok, "R"}
     assert MR.get_piece_at_square("a2", fen) == {:ok, "P"}
@@ -92,5 +92,33 @@ defmodule MoveRepresentationTest do
     assert MR.get_piece_at_square("a8", fen) == {:ok, "r"}
     assert MR.get_piece_at_square("a4", fen) == {:ok, " "}
     assert MR.get_piece_at_square("h2", fen) == {:ok, "P"}
+  end
+  test "get piece at square for more interesting position" do
+    # B60 sicillian defence
+    fen = "r1bqkb1r/pp2pppp/2np1n2/6B1/3NP3/2N5/PPP2PPP/R2QKB1R b KQkq - 5 6"
+    assert MR.get_piece_at_square("a1", fen) == {:ok, "R"}
+    assert MR.get_piece_at_square("a2", fen) == {:ok, "P"}
+    assert MR.get_piece_at_square("a7", fen) == {:ok, "p"}
+    assert MR.get_piece_at_square("a8", fen) == {:ok, "r"}
+    assert MR.get_piece_at_square("a4", fen) == {:ok, " "}
+    assert MR.get_piece_at_square("h2", fen) == {:ok, "P"}
+    assert MR.get_piece_at_square("e4", fen) == {:ok, "P"}
+    assert MR.get_piece_at_square("d4", fen) == {:ok, "N"}
+  end
+
+  test "get_move_context" do
+    fen = "rnbqkbnr/ppp2ppp/4p3/3p4/3N4/2N5/PPPPPPPP/R1BQKB1R w KQkq - 0 1"
+    legal_moves = [{"c3", "b5"}, {"d4", "b5"}]
+    assert MR.get_piece_at_square("c3", fen) == {:ok, "N"}
+    assert MR.get_piece_at_square("d4", fen) == {:ok, "N"}
+    assert MR.get_move_context("N", {"c3", "b5"}, legal_moves, fen) == [{:ok, %{rank: "4", file: "d"}}]
+    assert MR.get_move_context("N", {"c3", "b5"}, [{"c3", "b5"}], fen) == []
+  end
+  test "get moves that end at" do
+    legal_moves = [{"c3", "b5"}, {"d4", "b5"}]
+    assert MR.get_moves_that_end_at("b5", legal_moves) == legal_moves
+    assert MR.get_moves_that_end_at("b5", []) == []
+    assert MR.get_moves_that_end_at("a6", legal_moves) == []
+    assert MR.get_moves_that_end_at("b6", [{"c3", "b5"}, {"d4", "b6"}]) == [{"d4", "b6"}]
   end
 end
