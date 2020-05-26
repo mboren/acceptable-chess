@@ -37,14 +37,14 @@ defmodule MoveRepresentation do
   @spec get_move_context(piece, move, [move], String.t) :: [{:ok, map}]
   def get_move_context(piece, {start_square, end_square}, legal_moves, fen) do
     moves = get_moves_that_end_at(end_square, legal_moves)
-        |> MapSet.new()
-        |> MapSet.delete({start_square, end_square})
-        |> MapSet.to_list()
+            |> MapSet.new()
+            |> MapSet.delete({start_square, end_square})
+            |> MapSet.to_list()
 
     moves
-      |> Enum.map(fn {s, e} -> s end)
-      |> Enum.filter(fn s -> get_piece_at_square(s, fen) == {:ok, piece} end)
-      |> Enum.map(&get_rank_and_file/1)
+    |> Enum.map(fn {s, e} -> s end)
+    |> Enum.filter(fn s -> get_piece_at_square(s, fen) == {:ok, piece} end)
+    |> Enum.map(&get_rank_and_file/1)
   end
 
   @spec get_disambiguation(piece, square, square, [move], String.t) :: String.t

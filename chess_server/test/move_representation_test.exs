@@ -15,7 +15,7 @@ defmodule MoveRepresentationTest do
 
   test "get_san" do
     start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    legal_moves = [ {"h2", "h4"}, {"h2", "h3"}, {"g2", "g4"}, {"g2", "g3"}, {"f2", "f4"}, {"f2", "f3"}, {"e2", "e4"}, {"e2", "e3"}, {"d2", "d4"}, {"d2", "d3"}, {"c2", "c4"}, {"c2", "c3"}, {"b2", "b4"}, {"b2", "b3"}, {"a2", "a4"}, {"a2", "a3"}, {"g1", "h3"}, {"g1", "f3"}, {"b1", "c3"}, {"b1", "a3"} ]
+    legal_moves = [{"h2", "h4"}, {"h2", "h3"}, {"g2", "g4"}, {"g2", "g3"}, {"f2", "f4"}, {"f2", "f3"}, {"e2", "e4"}, {"e2", "e3"}, {"d2", "d4"}, {"d2", "d3"}, {"c2", "c4"}, {"c2", "c3"}, {"b2", "b4"}, {"b2", "b3"}, {"a2", "a4"}, {"a2", "a3"}, {"g1", "h3"}, {"g1", "f3"}, {"b1", "c3"}, {"b1", "a3"}]
     result = MR.get_san(start_fen, legal_moves, Enum.at(legal_moves, 0))
     assert result == "h4"
     assert MR.get_san(start_fen, legal_moves, {"b1", "c3"}) == "Nc3"
