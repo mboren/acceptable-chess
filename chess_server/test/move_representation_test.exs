@@ -11,7 +11,27 @@ defmodule MoveRepresentationTest do
     assert is_list(MoveRepresentation.module_info())
   end
 
+  test "pawn capture" do
+    fen = "rnbqkbnr/ppp1pppp/3p4/4P3/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1"
+    legal_move = {"d6", "e5"}
+    assert MR.get_san(fen, [legal_move], legal_move) == "dxe5"
+  end
 
+  test "white pawn promotion" do
+    fen = "rnbqkbn1/pppppppP/8/8/8/8/PPPPPPP1/RNBQKBNR w KQq - 0 1"
+    legal_moves = [{"h7", "h8", "N"} , {"h7", "h8", "Q"}, {"h7", "h8", "R"}, {"h7", "h8", "B"}, {"h7", "g8", "N"}, {"h7", "g8", "Q"}, {"h7", "g8", "R"}, {"h7", "g8", "B"}]
+    assert MR.get_san(fen, legal_moves, {"h7", "h8", "N"}) == "h8=N"
+    assert MR.get_san(fen, legal_moves, {"h7", "g8", "Q"}) == "hxg8=Q"
+  end
+
+  test "black pawn promotion" do
+    fen = "rnbqkbnr/ppppppp1/8/8/8/8/PPPPPPPp/RNBQKB2 b Qkq - 0 1"
+    legal_moves = [{"h2", "h1", "N"} , {"h2", "h1", "Q"} , {"h2", "h1", "R"} , {"h2", "h1", "B"}]
+    assert MR.get_san(fen, legal_moves, {"h2", "h1", "N"}) == "h1=N"
+    assert MR.get_san(fen, legal_moves, {"h2", "h1", "R"}) == "h1=R"
+    assert MR.get_san(fen, legal_moves, {"h2", "h1", "B"}) == "h1=B"
+    assert MR.get_san(fen, legal_moves, {"h2", "h1", "Q"}) == "h1=Q"
+  end
 
   test "get_san" do
     start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
