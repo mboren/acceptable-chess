@@ -1,4 +1,11 @@
 defmodule MoveRepresentation do
+  @type square :: String.t
+  @type move :: {square, square}
+  @type piece :: String.t
+  @type rank :: String.t
+  @type file :: String.t
+
+  @spec get_san(String.t(), [move], move) :: String.t()
   def get_san(fen, legal_moves, {start_square, end_square}) do
     piece_list = fen_to_piece_list(fen)
     {:ok, piece} = get_piece_at_square(start_square, fen)
