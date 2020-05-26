@@ -1,24 +1,31 @@
 defmodule MoveRepresentation do
   @type square :: String.t
-  @type move :: {square, square} | {square, square, piece}
+  @type move :: %{start: String.t, end: String.t} | %{start: String.t, end: String.t, promotion: promo_to}
   @type piece :: String.t
   @type rank :: String.t
   @type file :: :a | :b | :c | :d | :e | :f | :g | :h
+  @type promo_to :: :q | :r | :b | :n
 
   @spec get_san(String.t(), [move], move) :: String.t()
-  def get_san(fen, _legal_moves, {start_square, end_square, promotion}) do
+  def get_san(fen, _legal_moves, %{start: start_square, end: end_square, promotion: promotion}) do
     {:ok, destination_piece} = get_piece_at_square(end_square, fen)
 
     {:ok, %{rank: _, file: start_file}} = get_rank_and_file(start_square)
 
+    promo_string = promotion_to_string(promotion)
     if destination_piece == " " do
-      "#{end_square}=#{String.upcase(promotion)}"
+      "#{end_square}#{promo_string}"
     else
-      "#{Atom.to_string(start_file)}x#{end_square}=#{String.upcase(promotion)}"
+      "#{Atom.to_string(start_file)}x#{end_square}#{promo_string}"
     end
   end
 
-  def get_san(fen, legal_moves, {start_square, end_square}) do
+  @spec promotion_to_string(promo_to) :: String.t
+  def promotion_to_string(promo) do
+    "=" <> String.upcase(Atom.to_string(promo))
+  end
+
+  def get_san(fen, legal_moves, move = %{start: start_square, end: end_square}) do
     piece_list = fen_to_piece_list(fen)
     {:ok, piece} = get_piece_at_square(start_square, fen)
     {:ok, destination_piece} = get_piece_at_square(end_square, fen)
@@ -29,8 +36,8 @@ defmodule MoveRepresentation do
     cond do
       is_straight_pawn_move(piece, start_file, end_file) -> end_square
       is_pawn_capture?(piece, destination_piece) -> Atom.to_string(start_file) <> "x" <> end_square
-      is_queenside_castle(piece, {start_square, end_square}) -> "O-O-O"
-      is_kingside_castle(piece, {start_square, end_square}) -> "O-O"
+      is_queenside_castle(piece, move) -> "O-O-O"
+      is_kingside_castle(piece, move) -> "O-O"
       true ->
         context = get_disambiguation(piece, start_square, end_square, legal_moves, fen)
         if destination_piece != " " do
@@ -49,18 +56,28 @@ defmodule MoveRepresentation do
   @spec get_moves_that_end_at(square, [move]) :: [move]
   def get_moves_that_end_at(square, moves) do
     moves
-    |> Enum.filter(fn {s, e} -> e == square end)
+    |> Enum.filter(fn m -> get_move_end(m) == square end)
+  end
+
+  @spec get_move_end(move) :: square
+  def get_move_end(%{end: e}) do
+    e
+  end
+
+  @spec get_move_start(move) :: square
+  def get_move_start(%{start: s}) do
+    s
   end
 
   @spec get_move_context(piece, move, [move], String.t) :: [{:ok, map}]
-  def get_move_context(piece, {start_square, end_square}, legal_moves, fen) do
+  def get_move_context(piece, move = %{start: start_square, end: end_square}, legal_moves, fen) do
     moves = get_moves_that_end_at(end_square, legal_moves)
             |> MapSet.new()
-            |> MapSet.delete({start_square, end_square})
+            |> MapSet.delete(move)
             |> MapSet.to_list()
 
     moves
-    |> Enum.map(fn {s, e} -> s end)
+    |> Enum.map(&get_move_start/1)
     |> Enum.filter(fn s -> get_piece_at_square(s, fen) == {:ok, piece} end)
     |> Enum.map(&get_rank_and_file/1)
   end
@@ -69,7 +86,7 @@ defmodule MoveRepresentation do
   def get_disambiguation(piece, start_square, end_square, legal_moves, fen) do
     with {:ok, %{rank: start_rank, file: start_file}} <- get_rank_and_file(start_square) do
 
-      potentially_ambiguous_squares = get_move_context(piece, {start_square, end_square}, legal_moves, fen)
+      potentially_ambiguous_squares = get_move_context(piece, %{start: start_square, end: end_square}, legal_moves, fen)
                                       |> Enum.filter(&match?({:ok, _}, &1))
                                       |> Enum.map(fn {:ok, rank_and_file} -> rank_and_file end)
 
@@ -126,26 +143,26 @@ defmodule MoveRepresentation do
   end
 
   @spec is_queenside_castle(piece, move) :: boolean
-  def is_queenside_castle("K", {"e1", "c1"}) do
+  def is_queenside_castle("K", %{start: "e1", end: "c1"}) do
     true
   end
 
-  def is_queenside_castle("k", {"e8", "c8"}) do
+  def is_queenside_castle("k", %{start: "e8", end: "c8"}) do
     true
   end
 
-  def is_queenside_castle(_piece, {_start_square, _end_square}) do
+  def is_queenside_castle(_piece, _move) do
     false
   end
 
   @spec is_kingside_castle(piece, move) :: boolean
-  def is_kingside_castle("K", {"e1", "g1"}) do
+  def is_kingside_castle("K", %{start: "e1", end: "g1"}) do
     true
   end
-  def is_kingside_castle("k", {"e8", "g8"}) do
+  def is_kingside_castle("k", %{start: "e8", end: "g8"}) do
     true
   end
-  def is_kingside_castle(_piece, {_start_square, _end_square}) do
+  def is_kingside_castle(_piece, _move) do
     false
   end
 
