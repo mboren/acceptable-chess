@@ -7,10 +7,6 @@ defmodule MoveRepresentationTest do
 
   doctest MoveRepresentation
 
-  test "module exists" do
-    assert is_list(MoveRepresentation.module_info())
-  end
-
   test "pawn capture" do
     fen = "rnbqkbnr/ppp1pppp/3p4/4P3/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1"
     legal_move = {"d6", "e5"}
