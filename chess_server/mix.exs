@@ -23,6 +23,8 @@ defmodule ChessApp.MixProject do
   defp deps do
     [
       {:binbo, "~> 1.2"},
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
     ]
   end
 end
