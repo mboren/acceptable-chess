@@ -16,6 +16,7 @@ defmodule MoveRepresentation do
 
     cond do
       is_straight_pawn_move(piece, start_file, end_file) -> end_square
+      is_pawn_capture?(piece, destination_piece) -> Atom.to_string(start_file) <> "x" <> end_square
       is_queenside_castle(piece, {start_square, end_square}) -> "O-O-O"
       is_kingside_castle(piece, {start_square, end_square}) -> "O-O"
       true ->
@@ -26,6 +27,11 @@ defmodule MoveRepresentation do
           String.upcase(piece) <> context <> end_square
         end
     end
+  end
+
+  @spec is_pawn_capture?(piece, piece) :: boolean
+  def is_pawn_capture?(piece, piece_at_destination) do
+    is_pawn?(piece) and piece_at_destination != " "
   end
 
   @spec get_moves_that_end_at(square, [move]) :: [move]
