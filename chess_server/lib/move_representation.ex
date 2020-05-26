@@ -66,16 +66,12 @@ defmodule MoveRepresentation do
       end
   end
 
-  def determine_context(start_file, start_rank, is_file_ambiguous = false, _is_rank_ambiguous) do
-    start_file
-  end
-
-  def determine_context(start_file, start_rank, is_file_ambiguous = true, is_rank_ambiguous = false) do
-    start_rank
-  end
-
-  def determine_context(start_file, start_rank, is_file_ambiguous = true, is_rank_ambiguous = true) do
-    start_file <> start_rank
+  def determine_context(start_file, start_rank, is_file_ambiguous, is_rank_ambiguous) do
+    case {is_file_ambiguous, is_rank_ambiguous} do
+      {false, _} -> start_file
+      {true, false} -> start_rank
+      {true, true} -> start_file <> start_rank
+    end
   end
 
   def is_pawn?(piece) do
