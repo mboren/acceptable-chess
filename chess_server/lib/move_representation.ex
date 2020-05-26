@@ -1,11 +1,23 @@
 defmodule MoveRepresentation do
   @type square :: String.t
-  @type move :: {square, square}
+  @type move :: {square, square} | {square, square, piece}
   @type piece :: String.t
   @type rank :: String.t
   @type file :: :a | :b | :c | :d | :e | :f | :g | :h
 
   @spec get_san(String.t(), [move], move) :: String.t()
+  def get_san(fen, _legal_moves, {start_square, end_square, promotion}) do
+    {:ok, destination_piece} = get_piece_at_square(end_square, fen)
+
+    {:ok, %{rank: _, file: start_file}} = get_rank_and_file(start_square)
+
+    if destination_piece == " " do
+      "#{end_square}=#{String.upcase(promotion)}"
+    else
+      "#{Atom.to_string(start_file)}x#{end_square}=#{String.upcase(promotion)}"
+    end
+  end
+
   def get_san(fen, legal_moves, {start_square, end_square}) do
     piece_list = fen_to_piece_list(fen)
     {:ok, piece} = get_piece_at_square(start_square, fen)
