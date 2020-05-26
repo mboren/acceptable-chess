@@ -111,7 +111,7 @@ defmodule MoveRepresentationTest do
     legal_moves = [{"c3", "b5"}, {"d4", "b5"}]
     assert MR.get_piece_at_square("c3", fen) == {:ok, "N"}
     assert MR.get_piece_at_square("d4", fen) == {:ok, "N"}
-    assert MR.get_move_context("N", {"c3", "b5"}, legal_moves, fen) == [{:ok, %{rank: "4", file: "d"}}]
+    assert MR.get_move_context("N", {"c3", "b5"}, legal_moves, fen) == [{:ok, %{rank: "4", file: :d}}]
     assert MR.get_move_context("N", {"c3", "b5"}, [{"c3", "b5"}], fen) == []
   end
   test "get moves that end at" do

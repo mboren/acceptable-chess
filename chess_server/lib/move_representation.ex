@@ -3,7 +3,7 @@ defmodule MoveRepresentation do
   @type move :: {square, square}
   @type piece :: String.t
   @type rank :: String.t
-  @type file :: String.t
+  @type file :: :a | :b | :c | :d | :e | :f | :g | :h
 
   @spec get_san(String.t(), [move], move) :: String.t()
   def get_san(fen, legal_moves, {start_square, end_square}) do
@@ -49,28 +49,34 @@ defmodule MoveRepresentation do
 
   @spec get_disambiguation(piece, square, square, [move], String.t) :: String.t
   def get_disambiguation(piece, start_square, end_square, legal_moves, fen) do
-    {:ok, %{rank: start_rank, file: start_file}} = get_rank_and_file(start_square)
+    with {:ok, %{rank: start_rank, file: start_file}} <- get_rank_and_file(start_square) do
 
-    potentially_ambiguous_squares = get_move_context(piece, {start_square, end_square}, legal_moves, fen)
-      |> Enum.filter(&match?({:ok, _}, &1))
-      |> Enum.map(fn {:ok, rank_and_file} -> rank_and_file end)
+      potentially_ambiguous_squares = get_move_context(piece, {start_square, end_square}, legal_moves, fen)
+                                      |> Enum.filter(&match?({:ok, _}, &1))
+                                      |> Enum.map(fn {:ok, rank_and_file} -> rank_and_file end)
 
-    case potentially_ambiguous_squares do
-      [] ->
-        ""
-      _ ->
-        files = Enum.map(potentially_ambiguous_squares, fn %{rank: _, file: f} -> f end) |> MapSet.new
-        ranks = Enum.map(potentially_ambiguous_squares, fn %{rank: r, file: _} -> r end) |> MapSet.new
+      case potentially_ambiguous_squares do
+        [] ->
+          ""
+        _ ->
+          files = Enum.map(potentially_ambiguous_squares, fn %{rank: _, file: f} -> f end)
+                  |> MapSet.new
+          ranks = Enum.map(potentially_ambiguous_squares, fn %{rank: r, file: _} -> r end)
+                  |> MapSet.new
 
-        determine_context(start_file, start_rank, MapSet.member?(files, start_file), MapSet.member?(ranks, start_rank))
+          determine_context(start_file, start_rank, MapSet.member?(files, start_file), MapSet.member?(ranks, start_rank))
       end
+    else
+      _ -> ""
+    end
   end
 
+  @spec determine_context(file, rank, boolean, boolean) :: String.t
   def determine_context(start_file, start_rank, is_file_ambiguous, is_rank_ambiguous) do
     case {is_file_ambiguous, is_rank_ambiguous} do
-      {false, _} -> start_file
+      {false, _} -> Atom.to_string(start_file)
       {true, false} -> start_rank
-      {true, true} -> start_file <> start_rank
+      {true, true} -> to_string(start_file) <> start_rank
     end
   end
 
@@ -82,15 +88,22 @@ defmodule MoveRepresentation do
     end
   end
 
-  @spec get_rank_and_file(square) :: {:ok, map}
+  @spec get_rank_and_file(square) :: {:ok, %{rank: rank, file: file}} | {:error, any}
   def get_rank_and_file(square) do
-    valid_files = MapSet.new(["a", "b", "c", "d", "e", "f", "g", "h"])
     valid_ranks = MapSet.new(["1", "2", "3", "4", "5", "6", "7", "8"])
 
-    with [file, rank] <- String.codepoints(square),
-         true <- MapSet.member?(valid_files, file),
-         true <- MapSet.member?(valid_ranks, rank) do
-      {:ok, %{rank: rank, file: file}}
+    case String.codepoints(square) do
+      [file_string, rank] ->
+        if MapSet.member?(valid_ranks, rank) do
+          case file_from_string(file_string) do
+            {:ok, file} ->
+              {:ok, %{rank: rank, file: file}}
+            {:error, message} ->
+              {:error, message}
+          end
+        end
+      _ ->
+        {:error, "square string must have length 2"}
     end
   end
 
@@ -132,14 +145,17 @@ defmodule MoveRepresentation do
   @spec get_piece_at_square(square, String.t) :: {:ok, piece} | {:error, any}
   def get_piece_at_square(square, fen) do
     piece_list = fen_to_piece_list(fen)
-    {:ok, index} = square_to_index(square)
-
-    Enum.fetch(piece_list, index)
+    with {:ok, index} <- square_to_index(square) do
+      Enum.fetch(piece_list, index)
+    end
   end
+
+
 
   @spec square_to_index(square) :: {:ok, 0..63} | {:error, any}
   def square_to_index(square) do
-    with [file, rank] <- String.codepoints(square),
+    with [file_string, rank] <- String.codepoints(square),
+         {:ok, file} <- file_from_string(file_string),
          {:ok, file_num} <- file_to_digit(file),
          {:ok, rank_num} <- char_to_digit(rank)
       do
@@ -185,17 +201,32 @@ defmodule MoveRepresentation do
     end
   end
 
-  @spec file_to_digit(String.t()) :: {:ok, 1..8} | {:error, any}
+  @spec file_from_string(String.t) :: {:ok, file} | {:error, any}
+  def file_from_string(character) do
+    case character do
+      "a" -> {:ok, :a}
+      "b" -> {:ok, :b}
+      "c" -> {:ok, :c}
+      "d" -> {:ok, :d}
+      "e" -> {:ok, :e}
+      "f" -> {:ok, :f}
+      "g" -> {:ok, :g}
+      "h" -> {:ok, :h}
+      other -> {:error, other}
+    end
+  end
+
+  @spec file_to_digit(file) :: {:ok, 1..8} | {:error, any}
   def file_to_digit(character) do
     case character do
-      "a" -> {:ok, 1}
-      "b" -> {:ok, 2}
-      "c" -> {:ok, 3}
-      "d" -> {:ok, 4}
-      "e" -> {:ok, 5}
-      "f" -> {:ok, 6}
-      "g" -> {:ok, 7}
-      "h" -> {:ok, 8}
+      :a -> {:ok, 1}
+      :b -> {:ok, 2}
+      :c -> {:ok, 3}
+      :d -> {:ok, 4}
+      :e -> {:ok, 5}
+      :f -> {:ok, 6}
+      :g -> {:ok, 7}
+      :h -> {:ok, 8}
       other -> {:error, other}
     end
   end
