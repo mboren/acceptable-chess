@@ -6,6 +6,11 @@ defmodule ChessApp.Game do
     history: [],
     playerResigned: nil
   )
+  @type player_id :: reference
+  @type player_color :: :white | :black
+  @type move :: %{start: String.t, end: String.t} | %{start: String.t, end: String.t, promotion: String.t}
+  @type move_with_san :: %{san: String.t, start: String.t, end: String.t} | %{san: String.t, start: String.t, end: String.t, promotion: String.t}
+  @type history :: list(move_with_san)
 
   def new_game() do
     {:ok, pid} = :binbo.new_server()
@@ -33,6 +38,7 @@ defmodule ChessApp.Game do
     state
   end
 
+  @spec get_player_color(player_id, %ChessApp.Game{whitePlayer: player_id}) :: player_color
   def get_player_color(player_id, %ChessApp.Game{whitePlayer: player_id}) do
     :white
   end
@@ -40,6 +46,7 @@ defmodule ChessApp.Game do
     :black
   end
 
+  @spec get_other_player_id(player_id, %ChessApp.Game{}) :: player_id
   def get_other_player_id(player_id, %ChessApp.Game{whitePlayer: player_id, blackPlayer: other_player_id}) do
     other_player_id
   end
@@ -51,7 +58,7 @@ defmodule ChessApp.Game do
     {:ok, color_to_move} = :binbo.side_to_move(pid)
     player_color = get_player_color(player_id, state)
     if color_to_move == player_color do
-      add_move_to_history(:binbo.move(pid, move_map_to_string(move)), move, state)
+      add_move_to_history(:binbo.move(pid, move_map_to_string(move)), move_from_map(move), state)
     else
       state
     end
@@ -61,13 +68,31 @@ defmodule ChessApp.Game do
     state
   end
 
-  defp add_move_to_history({:ok, _}, move, state) do
-    Map.put(state, :history, [move | state.history])
+  defp move_from_map(move) do
+    case move do
+      %{"start" => s, "end" => e, "promotion" => p} ->
+        %{start: s, end: e, promotion: p}
+      %{"start" => s, "end" => e} ->
+         %{start: s, end: e}
+      {s, e} -> %{start: s, end: e}
+      {s, e, p} -> %{start: s, end: e, promotion: p}
+    end
   end
+
+  defp add_move_to_history({:ok, _}, move, state = %ChessApp.Game{gameServer: pid}) do
+    {:ok, legal_moves} =  :binbo.all_legal_moves(pid, :bin)
+    legal_moves = Enum.map(legal_moves, &move_from_map/1)
+    {:ok, fen} = get_board_state(state)
+    san = MoveRepresentation.get_san(fen, legal_moves, move)
+    move_with_san = Map.put(move, :san, san)
+    Map.put(state, :history, [move_with_san | state.history])
+  end
+
   defp add_move_to_history({:error, _}, _move, state) do
     state
   end
 
+  @spec get_board_state(%ChessApp.Game{}) :: :binbo_server.get_fen_ret()
   def get_board_state(%ChessApp.Game{gameServer: pid}) do
     :binbo.get_fen(pid)
   end
@@ -133,7 +158,12 @@ defmodule ChessApp.Game do
     }
   end
 
+  @spec move_map_to_string(move) :: String.t
   defp move_map_to_string(%{"start" => s, "end" => e}) do
     s <> e
+  end
+
+  defp move_map_to_string(%{"start" => s, "end" => e, "promotion" => p}) do
+    s <> e <> String.downcase(p)
   end
 end
