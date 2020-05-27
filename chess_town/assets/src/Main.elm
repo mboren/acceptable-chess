@@ -5,7 +5,7 @@ import Browser exposing (Document)
 import Element exposing (Element)
 import Element.Input
 import Json.Decode exposing (Decoder, field, string)
-import Move exposing (Move)
+import Move exposing (Move, MoveWithSan)
 import Piece exposing (Piece)
 import Player exposing (Player)
 import Set exposing (Set)
@@ -20,13 +20,14 @@ port sendMove : Move -> Cmd msg
 
 port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
 
+type alias History = List MoveWithSan
 
 type Model
     = WaitingForInitialization
-    | MyTurn { mySide : Player, legalMoves : List Move, board : String, history : List Move, selection : Selection }
-    | WaitingForMoveToBeAccepted { mySide : Player, legalMoves : List Move, board : String, history : List Move, moveSent : Move }
-    | OtherPlayersTurn { mySide : Player, board : String, history : List Move }
-    | GameOver { mySide : Player, board : String, history : List Move, reason : GameOverReason }
+    | MyTurn { mySide : Player, legalMoves : List Move, board : String, history : History, selection : Selection }
+    | WaitingForMoveToBeAccepted { mySide : Player, legalMoves : List Move, board : String, history : History, moveSent : Move }
+    | OtherPlayersTurn { mySide : Player, board : String, history : History }
+    | GameOver { mySide : Player, board : String, history : History, reason : GameOverReason }
 
 
 type GameOverReason
@@ -50,7 +51,7 @@ type alias ServerGameState =
     , playerToMove : Player
     , yourPlayer : Player -- TODO I don't like this naming
     , legalMoves : List Move
-    , history : List Move
+    , history : History
     }
 
 
@@ -190,7 +191,7 @@ boardStateDecoder =
         (field "player_to_move" Player.decode)
         (field "player_color" Player.decode)
         (field "legal_moves" (Json.Decode.list moveDecoder))
-        (field "history" (Json.Decode.list moveDecoder))
+        (field "history" (Json.Decode.list moveWithSanDecoder))
         (field "winner" (Json.Decode.nullable Player.decode))
         |> Json.Decode.andThen validateDecodedState
 
@@ -201,7 +202,7 @@ type alias RawServerGameState =
     , playerToMove : Player
     , yourPlayer : Player
     , legalMoves : List Move
-    , history : List Move
+    , history : History
     , winner : Maybe Player
     }
 
@@ -253,6 +254,12 @@ moveDecoder =
         (field "start" string)
         (field "end" string)
 
+moveWithSanDecoder : Decoder MoveWithSan
+moveWithSanDecoder =
+    Json.Decode.map3 MoveWithSan
+        (field "start" string)
+        (field "end" string)
+        (field "san" string)
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -318,6 +325,7 @@ view model =
                         [ Element.width Element.fill ]
                         [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
                         , Element.text reasonText
+                        , history data.history
                         ]
 
                 WaitingForInitialization ->
@@ -328,6 +336,7 @@ view model =
                         [ Element.width Element.fill ]
                         [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
                         , resignButton
+                        , history data.history
                         ]
 
                 WaitingForMoveToBeAccepted data ->
@@ -336,6 +345,7 @@ view model =
                         [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
                         , Element.text "waiting"
                         , resignButton
+                        , history data.history
                         ]
 
                 OtherPlayersTurn data ->
@@ -344,6 +354,7 @@ view model =
                         [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
                         , Element.text "waiting for other player to move"
                         , resignButton
+                        , history data.history
                         ]
             )
         ]
@@ -353,3 +364,9 @@ view model =
 resignButton : Element Msg
 resignButton =
     Element.Input.button [] { onPress = Just Resign, label = Element.text "Offer resignation" }
+
+history : History -> Element Msg
+history hist =
+    List.map (.san) hist
+    |> String.join ", "
+    |> Element.text
