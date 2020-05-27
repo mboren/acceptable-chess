@@ -1,10 +1,10 @@
 defmodule ChessApp.Game do
   defstruct(
-    gameServer: nil,
-    whitePlayer: nil,
-    blackPlayer: nil,
+    game_server: nil,
+    white_player: nil,
+    black_player: nil,
     history: [],
-    playerResigned: nil
+    player_resigned: nil
   )
   @type player_id :: reference
   @type player_color :: :white | :black
@@ -15,46 +15,46 @@ defmodule ChessApp.Game do
   def new_game() do
     {:ok, pid} = :binbo.new_server()
     :binbo.new_game(pid)
-    %ChessApp.Game{gameServer: pid, history: []}
+    %ChessApp.Game{game_server: pid, history: []}
   end
 
-  def resign(player_id, state = %ChessApp.Game{gameServer: pid, playerResigned: nil, whitePlayer: player_id}) do
-    Map.put(state, :playerResigned, :white)
+  def resign(player_id, state = %ChessApp.Game{game_server: pid, player_resigned: nil, white_player: player_id}) do
+    Map.put(state, :player_resigned, :white)
   end
 
-  def resign(player_id, state = %ChessApp.Game{gameServer: pid, playerResigned: nil, blackPlayer: player_id}) do
-    Map.put(state, :playerResigned, :black)
+  def resign(player_id, state = %ChessApp.Game{game_server: pid, player_resigned: nil, black_player: player_id}) do
+    Map.put(state, :player_resigned, :black)
   end
 
-  def add_player_to_game(player_id, state = %ChessApp.Game{gameServer: _pid, whitePlayer: nil, blackPlayer: _player}) do
-    Map.put(state, :whitePlayer, player_id)
+  def add_player_to_game(player_id, state = %ChessApp.Game{game_server: _pid, white_player: nil, black_player: _player}) do
+    Map.put(state, :white_player, player_id)
   end
 
-  def add_player_to_game(player_id, state = %ChessApp.Game{gameServer: _pid, whitePlayer: _player, blackPlayer: nil}) do
-    Map.put(state, :blackPlayer, player_id)
+  def add_player_to_game(player_id, state = %ChessApp.Game{game_server: _pid, white_player: _player, black_player: nil}) do
+    Map.put(state, :black_player, player_id)
   end
-  def add_player_to_game(_player_id, state = %ChessApp.Game{gameServer: _pid, whitePlayer: _player, blackPlayer: _player2}) do
+  def add_player_to_game(_player_id, state = %ChessApp.Game{game_server: _pid, white_player: _player, black_player: _player2}) do
     # if both players have already been set, don't do anything
     state
   end
 
-  @spec get_player_color(player_id, %ChessApp.Game{whitePlayer: player_id}) :: player_color
-  def get_player_color(player_id, %ChessApp.Game{whitePlayer: player_id}) do
+  @spec get_player_color(player_id, %ChessApp.Game{white_player: player_id}) :: player_color
+  def get_player_color(player_id, %ChessApp.Game{white_player: player_id}) do
     :white
   end
-  def get_player_color(player_id, %ChessApp.Game{blackPlayer: player_id}) do
+  def get_player_color(player_id, %ChessApp.Game{black_player: player_id}) do
     :black
   end
 
   @spec get_other_player_id(player_id, %ChessApp.Game{}) :: player_id
-  def get_other_player_id(player_id, %ChessApp.Game{whitePlayer: player_id, blackPlayer: other_player_id}) do
+  def get_other_player_id(player_id, %ChessApp.Game{white_player: player_id, black_player: other_player_id}) do
     other_player_id
   end
-  def get_other_player_id(player_id, %ChessApp.Game{whitePlayer: other_player_id, blackPlayer: player_id}) do
+  def get_other_player_id(player_id, %ChessApp.Game{white_player: other_player_id, black_player: player_id}) do
     other_player_id
   end
 
-  def make_move(player_id, move, state = %ChessApp.Game{gameServer: pid, playerResigned: nil}) do
+  def make_move(player_id, move, state = %ChessApp.Game{game_server: pid, player_resigned: nil}) do
     {:ok, color_to_move} = :binbo.side_to_move(pid)
     player_color = get_player_color(player_id, state)
     {:ok, fen} = get_board_state(state)
@@ -65,7 +65,7 @@ defmodule ChessApp.Game do
     end
   end
 
-  def make_move(player_id, move, state = %ChessApp.Game{gameServer: pid, playerResigned: player}) do
+  def make_move(player_id, move, state = %ChessApp.Game{game_server: pid, player_resigned: player}) do
     state
   end
 
@@ -80,7 +80,7 @@ defmodule ChessApp.Game do
     end
   end
 
-  defp add_move_to_history({:ok, _}, move, fen, state = %ChessApp.Game{gameServer: pid}) do
+  defp add_move_to_history({:ok, _}, move, fen, state = %ChessApp.Game{game_server: pid}) do
     {:ok, legal_moves} =  :binbo.all_legal_moves(pid, :bin)
     legal_moves = Enum.map(legal_moves, &move_from_map/1)
     san = MoveRepresentation.get_san(fen, legal_moves, move)
@@ -93,11 +93,11 @@ defmodule ChessApp.Game do
   end
 
   @spec get_board_state(%ChessApp.Game{}) :: :binbo_server.get_fen_ret()
-  def get_board_state(%ChessApp.Game{gameServer: pid}) do
+  def get_board_state(%ChessApp.Game{game_server: pid}) do
     :binbo.get_fen(pid)
   end
 
-  def get_game_state(player_id, state = %ChessApp.Game{gameServer: pid, history: history}) do
+  def get_game_state(player_id, state = %ChessApp.Game{game_server: pid, history: history}) do
     {:ok, fen} = :binbo.get_fen(pid)
     {:ok, legal_moves} =  :binbo.all_legal_moves(pid, :bin)
     {:ok, player_to_move} =  :binbo.side_to_move(pid)
@@ -114,31 +114,31 @@ defmodule ChessApp.Game do
     }
   end
 
-  defp get_game_status(%ChessApp.Game{gameServer: pid, playerResigned: nil}) do
+  defp get_game_status(%ChessApp.Game{game_server: pid, player_resigned: nil}) do
     :binbo.game_status(pid)
   end
 
-  defp get_game_status(%ChessApp.Game{gameServer: pid, playerResigned: player}) do
+  defp get_game_status(%ChessApp.Game{game_server: pid, player_resigned: player}) do
     {:ok, :resignation}
   end
 
-  defp get_winner(:continue, _player_to_move, %ChessApp.Game{playerResigned: nil}) do
+  defp get_winner(:continue, _player_to_move, %ChessApp.Game{player_resigned: nil}) do
     nil
   end
 
-  defp get_winner(:checkmate, player_to_move = :white, %ChessApp.Game{playerResigned: nil}) do
+  defp get_winner(:checkmate, player_to_move = :white, %ChessApp.Game{player_resigned: nil}) do
     :black
   end
 
-  defp get_winner(:checkmate, player_to_move = :black, %ChessApp.Game{playerResigned: nil}) do
+  defp get_winner(:checkmate, player_to_move = :black, %ChessApp.Game{player_resigned: nil}) do
     :white
   end
 
-  defp get_winner(_status, _player_to_move, %ChessApp.Game{playerResigned: :white}) do
+  defp get_winner(_status, _player_to_move, %ChessApp.Game{player_resigned: :white}) do
     :black
   end
 
-  defp get_winner(_status, _player_to_move, %ChessApp.Game{playerResigned: :black}) do
+  defp get_winner(_status, _player_to_move, %ChessApp.Game{player_resigned: :black}) do
     :white
   end
 
