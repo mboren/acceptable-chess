@@ -29,11 +29,10 @@ defmodule ChessTownWeb.RoomChannel do
     game_state = ChessApp.get_game_state(deserialize(game_id), deserialize(player_id))
     broadcast!(socket, "game_state", %{body: game_state})
     other_player_id = ChessApp.get_other_player_id(deserialize(game_id), deserialize(player_id))
-    send_player_updated_state(socket, game_id, serialize(other_player_id))
+    if other_player_id != nil do
+      send_player_updated_state(socket, game_id, serialize(other_player_id))
+    end
     {:noreply, socket}
-  end
-
-  defp send_player_updated_state(_socket, _game_id, nil) do
   end
 
   defp send_player_updated_state(socket, game_id, player_id) do
