@@ -12,6 +12,12 @@ defmodule MoveRepresentationTest do
     %{start: s, end: e, promotion: p}
   end
 
+  test "en passant" do
+    fen = "rnbqkbnr/ppppp1pp/8/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 1"
+    legal_move = mm("e5", "f6")
+    assert MR.get_san(fen, [legal_move], legal_move) == "exf6"
+  end
+
   test "pawn capture" do
     fen = "rnbqkbnr/ppp1pppp/3p4/4P3/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1"
     legal_move = mm("d6", "e5")
