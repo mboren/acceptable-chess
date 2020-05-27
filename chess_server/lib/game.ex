@@ -57,8 +57,9 @@ defmodule ChessApp.Game do
   def make_move(player_id, move, state = %ChessApp.Game{gameServer: pid, playerResigned: nil}) do
     {:ok, color_to_move} = :binbo.side_to_move(pid)
     player_color = get_player_color(player_id, state)
+    {:ok, fen} = get_board_state(state)
     if color_to_move == player_color do
-      add_move_to_history(:binbo.move(pid, move_map_to_string(move)), move_from_map(move), state)
+      add_move_to_history(:binbo.move(pid, move_map_to_string(move)), move_from_map(move), fen, state)
     else
       state
     end
@@ -79,10 +80,9 @@ defmodule ChessApp.Game do
     end
   end
 
-  defp add_move_to_history({:ok, _}, move, state = %ChessApp.Game{gameServer: pid}) do
+  defp add_move_to_history({:ok, _}, move, fen, state = %ChessApp.Game{gameServer: pid}) do
     {:ok, legal_moves} =  :binbo.all_legal_moves(pid, :bin)
     legal_moves = Enum.map(legal_moves, &move_from_map/1)
-    {:ok, fen} = get_board_state(state)
     san = MoveRepresentation.get_san(fen, legal_moves, move)
     move_with_san = Map.put(move, :san, san)
     Map.put(state, :history, [move_with_san | state.history])
