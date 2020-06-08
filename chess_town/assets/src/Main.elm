@@ -414,7 +414,9 @@ view model =
                     in
                     Element.column
                         [ Element.width Element.fill ]
-                        [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+                        [ drawCapturedPieces data.otherPlayerLostPieces
+                        , Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+                        , drawCapturedPieces data.myLostPieces
                         , Element.text reasonText
                         , history data.history
                         ]
@@ -425,7 +427,9 @@ view model =
                 MyTurn data ->
                     Element.column
                         [ Element.width Element.fill ]
-                        [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+                        [ drawCapturedPieces data.otherPlayerLostPieces
+                        , Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+                        , drawCapturedPieces data.myLostPieces
                         , resignButton
                         , history data.history
                         ]
@@ -433,7 +437,9 @@ view model =
                 WaitingForMoveToBeAccepted data ->
                     Element.column
                         [ Element.width Element.fill ]
-                        [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+                        [ drawCapturedPieces data.otherPlayerLostPieces
+                        , Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+                        , drawCapturedPieces data.myLostPieces
                         , Element.text "waiting"
                         , resignButton
                         , history data.history
@@ -442,7 +448,9 @@ view model =
                 OtherPlayersTurn data ->
                     Element.column
                         [ Element.width Element.fill ]
-                        [ Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+                        [ drawCapturedPieces data.otherPlayerLostPieces
+                        , Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+                        , drawCapturedPieces data.myLostPieces
                         , Element.text "waiting for other player to move"
                         , resignButton
                         , history data.history
@@ -456,6 +464,12 @@ resignButton : Element Msg
 resignButton =
     Element.Input.button [] { onPress = Just Resign, label = Element.text "Offer resignation" }
 
+drawCapturedPieces : List Piece -> Element Msg
+drawCapturedPieces pieces =
+    List.map (Piece.toIconString) pieces
+    |> List.sort
+    |> String.join ""
+    |> Element.text
 
 history : History -> Element Msg
 history hist =

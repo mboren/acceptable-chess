@@ -100,6 +100,51 @@ toString { kind, player } =
         ( Queen, White ) ->
             "Q"
 
+
+toIconString : Piece -> String
+toIconString { kind, player } =
+    case player of
+        White ->
+            case kind of
+                Pawn ->
+                    "♙"
+
+                Rook ->
+                    "♖"
+
+                Knight ->
+                    "♘"
+
+                Bishop ->
+                    "♗"
+
+                King ->
+                    "♔"
+
+                Queen ->
+                    "♕"
+
+        Black ->
+            case kind of
+                Pawn ->
+                    "♟"
+
+                Rook ->
+                    "♜"
+
+                Knight ->
+                    "♞"
+
+                Bishop ->
+                    "♝"
+
+                King ->
+                    "♚"
+
+                Queen ->
+                    "♛"
+
+
 pieceKindToString pk =
     case pk of
         Pawn ->
