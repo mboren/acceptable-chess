@@ -465,12 +465,13 @@ resignButton : Element Msg
 resignButton =
     Element.Input.button [] { onPress = Just Resign, label = Element.text "Offer resignation" }
 
+
 drawCapturedPieces : List Piece -> Element Msg
 drawCapturedPieces pieces =
-    List.map (Piece.toIconString) pieces
-    |> List.sort
-    |> String.join ""
-    |> Element.text
+    List.map Piece.toIconString pieces
+        |> List.sort
+        |> String.join ""
+        |> Element.text
 
 
 history : History -> Element Msg
