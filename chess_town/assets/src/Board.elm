@@ -2,6 +2,7 @@ module Board exposing (..)
 
 import Element exposing (Element)
 import Element.Background as Background
+import Element.Border
 import Element.Events
 import Piece exposing (Piece)
 import Player exposing (Player)
@@ -94,25 +95,26 @@ draw board ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares,
         (List.map2 drawRow (orientBoard currentPlayer board) (orientBoard currentPlayer coordinates))
 
 
+possibleMoveOverlay =
+    Element.el
+        [ Element.Border.rounded 50
+        , Background.color (Element.rgb255 255 0 0)
+        , Element.width Element.fill
+        , Element.height Element.fill
+        , Element.alpha 0.5
+        ]
+        Element.none
+
+
 drawSquare : Element.Length -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Maybe Piece -> Square -> Element msg
 drawSquare size ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) maybePiece square =
     let
-        ( unselectedColor, selectedColor ) =
-            if Set.member square whiteSquares then
-                ( Element.rgb255 237 238 210, Element.rgb255 255 241 0 )
-
-            else
-                ( Element.rgb255 0 150 53, Element.rgb255 255 241 0 )
-
         color =
-            if Set.member square selectablePieceSquares then
-                selectedColor
-
-            else if Set.member square selectableMoveSquares then
-                selectedColor
+            if Set.member square whiteSquares then
+                Element.rgb255 237 238 210
 
             else
-                unselectedColor
+                Element.rgb255 0 150 53
 
         event =
             if Set.member square selectablePieceSquares then
@@ -123,12 +125,20 @@ drawSquare size ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSqu
 
             else
                 []
+
+        overlay =
+            if Set.member square selectableMoveSquares then
+                possibleMoveOverlay
+
+            else
+                Element.none
     in
     Element.el
         ([ Background.color color
          , Element.padding 0
          , Element.width size
          , Element.height size
+         , Element.inFront overlay
          ]
             ++ event
         )
