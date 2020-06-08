@@ -20,7 +20,10 @@ port sendMove : Move -> Cmd msg
 
 port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
 
-type alias History = List MoveWithSan
+
+type alias History =
+    List MoveWithSan
+
 
 type Model
     = WaitingForInitialization
@@ -238,6 +241,7 @@ decodeApply : Decoder a -> Decoder (a -> b) -> Decoder b
 decodeApply =
     Json.Decode.map2 (|>)
 
+
 required : String -> Decoder a -> Decoder (a -> b) -> Decoder b
 required fieldName itemDecoder functionDecoder =
     decodeApply (field fieldName itemDecoder) functionDecoder
@@ -273,17 +277,21 @@ type alias RawServerGameState =
 
 pieceDecoder : Decoder Piece
 pieceDecoder =
-    Json.Decode.string |> Json.Decode.andThen (\s ->
-        case String.toList s of
-            [c] ->
-                case Piece.fromChar c of
-                    Just piece ->
-                        Json.Decode.succeed piece
-                    Nothing ->
-                        Json.Decode.fail ("Unable to decode piece from string " ++ s)
-            _ ->
-                Json.Decode.fail ("I was trying to decode a piece when I found a string with length > 1: " ++ s)
-        )
+    Json.Decode.string
+        |> Json.Decode.andThen
+            (\s ->
+                case String.toList s of
+                    [ c ] ->
+                        case Piece.fromChar c of
+                            Just piece ->
+                                Json.Decode.succeed piece
+
+                            Nothing ->
+                                Json.Decode.fail ("Unable to decode piece from string " ++ s)
+
+                    _ ->
+                        Json.Decode.fail ("I was trying to decode a piece when I found a string with length > 1: " ++ s)
+            )
 
 
 validateDecodedState : RawServerGameState -> Decoder ServerGameState
@@ -335,12 +343,14 @@ moveDecoder =
         (field "start" string)
         (field "end" string)
 
+
 moveWithSanDecoder : Decoder MoveWithSan
 moveWithSanDecoder =
     Json.Decode.map3 MoveWithSan
         (field "start" string)
         (field "end" string)
         (field "san" string)
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -446,8 +456,9 @@ resignButton : Element Msg
 resignButton =
     Element.Input.button [] { onPress = Just Resign, label = Element.text "Offer resignation" }
 
+
 history : History -> Element Msg
 history hist =
-    List.map (.san) hist
-    |> String.join ", "
-    |> Element.text
+    List.map .san hist
+        |> String.join ", "
+        |> Element.text
