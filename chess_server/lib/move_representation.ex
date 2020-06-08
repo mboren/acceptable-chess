@@ -9,9 +9,9 @@ defmodule MoveRepresentation do
 
   @spec get_san(String.t(), [move], move) :: String.t()
   def get_san(fen, _legal_moves, %{start: start_square, end: end_square, promotion: promotion}) do
-    {:ok, destination_piece} = get_piece_at_square(end_square, fen)
+    {:ok, destination_piece} = Position.get_piece_at_square(end_square, fen)
 
-    {:ok, %{rank: _, file: start_file}} = get_rank_and_file(start_square)
+    {:ok, %{rank: _, file: start_file}} = Square.get_rank_and_file(start_square)
 
     promo_string = promotion_to_string(promotion)
     if destination_piece == " " do
@@ -27,12 +27,12 @@ defmodule MoveRepresentation do
   end
 
   def get_san(fen, legal_moves, move = %{start: start_square, end: end_square}) do
-    piece_list = fen_to_piece_list(fen)
-    {:ok, piece} = get_piece_at_square(start_square, fen)
-    {:ok, destination_piece} = get_piece_at_square(end_square, fen)
+    piece_list = Position.fen_to_piece_list(fen)
+    {:ok, piece} = Position.get_piece_at_square(start_square, fen)
+    {:ok, destination_piece} = Position.get_piece_at_square(end_square, fen)
 
-    {:ok, %{rank: start_rank, file: start_file}} = get_rank_and_file(start_square)
-    {:ok, %{rank: end_rank, file: end_file}} = get_rank_and_file(end_square)
+    {:ok, %{rank: start_rank, file: start_file}} = Square.get_rank_and_file(start_square)
+    {:ok, %{rank: end_rank, file: end_file}} = Square.get_rank_and_file(end_square)
 
     # if a pawn ends up at the end of the board, but we no promotion is stated,
     # binbo will automatically make it a queen
@@ -74,13 +74,13 @@ defmodule MoveRepresentation do
 
     moves
     |> Enum.map(&MA.get_move_start/1)
-    |> Enum.filter(fn s -> get_piece_at_square(s, fen) == {:ok, piece} end)
-    |> Enum.map(&get_rank_and_file/1)
+    |> Enum.filter(fn s -> Position.get_piece_at_square(s, fen) == {:ok, piece} end)
+    |> Enum.map(&Square.get_rank_and_file/1)
   end
 
   @spec get_disambiguation(piece, square, square, [move], String.t) :: String.t
   def get_disambiguation(piece, start_square, end_square, legal_moves, fen) do
-    with {:ok, %{rank: start_rank, file: start_file}} <- get_rank_and_file(start_square) do
+    with {:ok, %{rank: start_rank, file: start_file}} <- Square.get_rank_and_file(start_square) do
 
       potentially_ambiguous_squares = get_move_context(piece, %{start: start_square, end: end_square}, legal_moves, fen)
                                       |> Enum.filter(&match?({:ok, _}, &1))
@@ -108,115 +108,6 @@ defmodule MoveRepresentation do
       {false, _} -> Atom.to_string(start_file)
       {true, false} -> start_rank
       {true, true} -> to_string(start_file) <> start_rank
-    end
-  end
-
-
-  @spec get_rank_and_file(square) :: {:ok, %{rank: rank, file: file}} | {:error, any}
-  def get_rank_and_file(square) do
-    valid_ranks = MapSet.new(["1", "2", "3", "4", "5", "6", "7", "8"])
-
-    case String.codepoints(square) do
-      [file_string, rank] ->
-        if MapSet.member?(valid_ranks, rank) do
-          case file_from_string(file_string) do
-            {:ok, file} ->
-              {:ok, %{rank: rank, file: file}}
-            {:error, message} ->
-              {:error, message}
-          end
-        end
-      _ ->
-        {:error, "square string must have length 2"}
-    end
-  end
-
-
-  @spec get_piece_at_square(square, String.t) :: {:ok, piece} | {:error, any}
-  def get_piece_at_square(square, fen) do
-    piece_list = fen_to_piece_list(fen)
-    with {:ok, index} <- square_to_index(square) do
-      Enum.fetch(piece_list, index)
-    end
-  end
-
-
-  @spec square_to_index(square) :: {:ok, 0..63} | {:error, any}
-  def square_to_index(square) do
-    with [file_string, rank] <- String.codepoints(square),
-         {:ok, file} <- file_from_string(file_string),
-         {:ok, file_num} <- file_to_digit(file),
-         {:ok, rank_num} <- char_to_digit(rank)
-      do
-      {:ok, 63 - 8 * rank_num + file_num}
-    else
-      foo -> {:error, foo}
-    end
-  end
-
-  @spec fen_to_piece_list(String.t()) :: [String.t()]
-  def fen_to_piece_list(fen) do
-    [pieces, _side_to_move, _castling, _enpassant, _halfmove, _fullmove] = String.split(fen, " ")
-
-    rows = String.split(pieces, "/")
-           |> Enum.map(&String.codepoints/1)
-           |> Enum.map(fn pts -> Enum.map(pts, &digit_to_spaces/1) end)
-           |> Enum.map(fn pts -> Enum.map(pts, &digit_to_spaces/1) end)
-           |> List.flatten
-    rows
-  end
-
-  def digit_to_spaces(character) do
-    case char_to_digit(character) do
-      {:ok, digit} ->
-        List.duplicate(" ", digit)
-      {:error, _} ->
-        character
-    end
-  end
-
-  @spec char_to_digit(String.t()) :: {:ok, 1..8} | {:error, any}
-  def char_to_digit(character) do
-    case character do
-      "1" -> {:ok, 1}
-      "2" -> {:ok, 2}
-      "3" -> {:ok, 3}
-      "4" -> {:ok, 4}
-      "5" -> {:ok, 5}
-      "6" -> {:ok, 6}
-      "7" -> {:ok, 7}
-      "8" -> {:ok, 8}
-      other -> {:error, other}
-    end
-  end
-
-  @spec file_from_string(String.t) :: {:ok, file} | {:error, any}
-  def file_from_string(character) do
-    case character do
-      "a" -> {:ok, :a}
-      "b" -> {:ok, :b}
-      "c" -> {:ok, :c}
-      "d" -> {:ok, :d}
-      "e" -> {:ok, :e}
-      "f" -> {:ok, :f}
-      "g" -> {:ok, :g}
-      "h" -> {:ok, :h}
-      other -> {:error, other}
-    end
-  end
-
-  @spec file_to_digit(file) :: {:ok, 1..8} | {:error, any}
-  def file_to_digit(character) do
-    case character do
-      :a -> {:ok, 1}
-      :b -> {:ok, 2}
-      :c -> {:ok, 3}
-      :d -> {:ok, 4}
-      :e -> {:ok, 5}
-      :f -> {:ok, 6}
-      :g -> {:ok, 7}
-      :h -> {:ok, 8}
-      other -> {:error, other}
     end
   end
 end
