@@ -4,6 +4,7 @@ import Board
 import Browser exposing (Document)
 import Element exposing (Element)
 import Element.Background
+import Element.Border as Border
 import Element.Input
 import Json.Decode exposing (Decoder, field, string)
 import Move exposing (Move, MoveWithSan)
@@ -463,7 +464,12 @@ view model =
 
 resignButton : Element Msg
 resignButton =
-    Element.Input.button [] { onPress = Just Resign, label = Element.text "Offer resignation" }
+    Element.Input.button
+        [ Element.Background.color (Element.rgb255 200 200 200)
+        , Element.padding 5
+        , Border.rounded 10
+        ]
+        { onPress = Just Resign, label = Element.text "Offer resignation" }
 
 
 drawCapturedPieces : List Piece -> Element Msg
