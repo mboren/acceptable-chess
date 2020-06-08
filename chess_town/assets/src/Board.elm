@@ -93,6 +93,7 @@ possibleMoveOverlay =
         , Background.color (Element.rgb255 255 0 0)
         , Element.width Element.fill
         , Element.height Element.fill
+        , Element.scale 0.5
         , Element.alpha 0.5
         ]
         Element.none
