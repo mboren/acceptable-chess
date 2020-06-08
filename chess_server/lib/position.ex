@@ -3,10 +3,11 @@ defmodule Position do
   Used for working with FEN formatted chess positions
   """
   @type piece :: String.t
+  @type fen :: String.t
+  @type piece_list :: [piece]
 
-  @spec get_piece_at_square(Square.square, String.t) :: {:ok, piece} | {:error, any}
-  def get_piece_at_square(square, fen) do
-    piece_list = fen_to_piece_list(fen)
+  @spec get_piece_at_square(Square.square, piece_list) :: {:ok, piece} | {:error, any}
+  def get_piece_at_square(square, piece_list) do
     with {:ok, index} <- square_to_index(square) do
       Enum.fetch(piece_list, index)
     end

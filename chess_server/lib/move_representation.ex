@@ -7,7 +7,8 @@ defmodule MoveRepresentation do
 
   @spec get_san(String.t(), [move], move) :: String.t()
   def get_san(fen, _legal_moves, %{start: start_square, end: end_square, promotion: promotion}) do
-    {:ok, destination_piece} = Position.get_piece_at_square(end_square, fen)
+    piece_list = Position.fen_to_piece_list(fen)
+    {:ok, destination_piece} = Position.get_piece_at_square(end_square, piece_list)
 
     {:ok, %{rank: _, file: start_file}} = Square.get_rank_and_file(start_square)
 
@@ -26,8 +27,8 @@ defmodule MoveRepresentation do
 
   def get_san(fen, legal_moves, move = %{start: start_square, end: end_square}) do
     piece_list = Position.fen_to_piece_list(fen)
-    {:ok, piece} = Position.get_piece_at_square(start_square, fen)
-    {:ok, destination_piece} = Position.get_piece_at_square(end_square, fen)
+    {:ok, piece} = Position.get_piece_at_square(start_square, piece_list)
+    {:ok, destination_piece} = Position.get_piece_at_square(end_square, piece_list)
 
     {:ok, %{rank: start_rank, file: start_file}} = Square.get_rank_and_file(start_square)
     {:ok, %{rank: end_rank, file: end_file}} = Square.get_rank_and_file(end_square)
@@ -48,7 +49,7 @@ defmodule MoveRepresentation do
       MA.is_queenside_castle(piece, move) -> "O-O-O"
       MA.is_kingside_castle(piece, move) -> "O-O"
       true ->
-        context = get_disambiguation(piece, start_square, end_square, legal_moves, fen)
+        context = get_disambiguation(piece, start_square, end_square, legal_moves, piece_list)
         if destination_piece != " " do
           String.upcase(piece) <> context <> "x" <> end_square
         else
@@ -63,8 +64,8 @@ defmodule MoveRepresentation do
     |> Enum.filter(fn m -> MA.get_move_end(m) == square end)
   end
 
-  @spec get_move_context(piece, move, [move], String.t) :: [{:ok, map}]
-  def get_move_context(piece, move = %{start: start_square, end: end_square}, legal_moves, fen) do
+  @spec get_move_context(piece, move, [move], Position.piece_list) :: [{:ok, map}]
+  def get_move_context(piece, move = %{start: start_square, end: end_square}, legal_moves, piece_list) do
     moves = get_moves_that_end_at(end_square, legal_moves)
             |> MapSet.new()
             |> MapSet.delete(move)
@@ -72,15 +73,15 @@ defmodule MoveRepresentation do
 
     moves
     |> Enum.map(&MA.get_move_start/1)
-    |> Enum.filter(fn s -> Position.get_piece_at_square(s, fen) == {:ok, piece} end)
+    |> Enum.filter(fn s -> Position.get_piece_at_square(s, piece_list) == {:ok, piece} end)
     |> Enum.map(&Square.get_rank_and_file/1)
   end
 
-  @spec get_disambiguation(piece, square, square, [move], String.t) :: String.t
-  def get_disambiguation(piece, start_square, end_square, legal_moves, fen) do
+  @spec get_disambiguation(piece, square, square, [move], Position.piece_list) :: String.t
+  def get_disambiguation(piece, start_square, end_square, legal_moves, piece_list) do
     with {:ok, %{rank: start_rank, file: start_file}} <- Square.get_rank_and_file(start_square) do
 
-      potentially_ambiguous_squares = get_move_context(piece, %{start: start_square, end: end_square}, legal_moves, fen)
+      potentially_ambiguous_squares = get_move_context(piece, %{start: start_square, end: end_square}, legal_moves, piece_list)
                                       |> Enum.filter(&match?({:ok, _}, &1))
                                       |> Enum.map(fn {:ok, rank_and_file} -> rank_and_file end)
 

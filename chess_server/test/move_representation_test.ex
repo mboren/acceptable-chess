@@ -112,46 +112,13 @@ defmodule MoveRepresentationTest do
       assert MR.get_san(fen, legal_moves, mm("f3", "e4")) == "Qf3e4"
   end
 
-  test "start position FEN to piece list" do
-    start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    expected = ["r", "n", "b", "q", "k", "b", "n", "r", "p", "p", "p", "p", "p", "p", "p", "p", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "P", "P", "P", "P", "P", "P", "P", "P", "R", "N", "B", "Q", "K", "B", "N", "R" ]
-    assert MR.fen_to_piece_list(start_fen)  == expected
-  end
-  test "pawn move FEN to piece list" do
-    fen = "rnbqkbnr/pppp1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    expected = ["r", "n", "b", "q", "k", "b", "n", "r", "p", "p", "p", "p", " ", "p", "p", "p", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "p", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "P", "P", "P", "P", "P", "P", "P", "P", "R", "N", "B", "Q", "K", "B", "N", "R" ]
-    assert MR.fen_to_piece_list(fen)  == expected
-  end
-
-  test "get piece at square for starting position" do
-    fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    assert MR.get_piece_at_square("a1", fen) == {:ok, "R"}
-    assert MR.get_piece_at_square("a2", fen) == {:ok, "P"}
-    assert MR.get_piece_at_square("a7", fen) == {:ok, "p"}
-    assert MR.get_piece_at_square("a8", fen) == {:ok, "r"}
-    assert MR.get_piece_at_square("a4", fen) == {:ok, " "}
-    assert MR.get_piece_at_square("h2", fen) == {:ok, "P"}
-  end
-  test "get piece at square for more interesting position" do
-    # B60 sicillian defence
-    fen = "r1bqkb1r/pp2pppp/2np1n2/6B1/3NP3/2N5/PPP2PPP/R2QKB1R b KQkq - 5 6"
-    assert MR.get_piece_at_square("a1", fen) == {:ok, "R"}
-    assert MR.get_piece_at_square("a2", fen) == {:ok, "P"}
-    assert MR.get_piece_at_square("a7", fen) == {:ok, "p"}
-    assert MR.get_piece_at_square("a8", fen) == {:ok, "r"}
-    assert MR.get_piece_at_square("a4", fen) == {:ok, " "}
-    assert MR.get_piece_at_square("h2", fen) == {:ok, "P"}
-    assert MR.get_piece_at_square("e4", fen) == {:ok, "P"}
-    assert MR.get_piece_at_square("d4", fen) == {:ok, "N"}
-  end
 
   test "get_move_context" do
     fen = "rnbqkbnr/ppp2ppp/4p3/3p4/3N4/2N5/PPPPPPPP/R1BQKB1R w KQkq - 0 1"
+    piece_list = Position.fen_to_piece_list(fen)
     legal_moves = [mm("c3", "b5"), mm("d4", "b5")]
-    assert MR.get_piece_at_square("c3", fen) == {:ok, "N"}
-    assert MR.get_piece_at_square("d4", fen) == {:ok, "N"}
-    assert MR.get_move_context("N", mm("c3", "b5"), legal_moves, fen) == [{:ok, %{rank: "4", file: :d}}]
-    assert MR.get_move_context("N", mm("c3", "b5"), [mm("c3", "b5")], fen) == []
+    assert MR.get_move_context("N", mm("c3", "b5"), legal_moves, piece_list) == [{:ok, %{rank: "4", file: :d}}]
+    assert MR.get_move_context("N", mm("c3", "b5"), [mm("c3", "b5")], piece_list) == []
   end
   test "get moves that end at" do
     legal_moves = [mm("c3", "b5"), mm("d4", "b5")]
