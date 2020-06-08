@@ -24,10 +24,39 @@ type alias History = List MoveWithSan
 
 type Model
     = WaitingForInitialization
-    | MyTurn { mySide : Player, legalMoves : List Move, board : String, history : History, selection : Selection }
-    | WaitingForMoveToBeAccepted { mySide : Player, legalMoves : List Move, board : String, history : History, moveSent : Move }
-    | OtherPlayersTurn { mySide : Player, board : String, history : History }
-    | GameOver { mySide : Player, board : String, history : History, reason : GameOverReason }
+    | MyTurn
+        { mySide : Player
+        , myLostPieces : List Piece
+        , otherPlayerLostPieces : List Piece
+        , legalMoves : List Move
+        , board : String
+        , history : History
+        , selection : Selection
+        }
+    | WaitingForMoveToBeAccepted
+        { mySide : Player
+        , myLostPieces : List Piece
+        , otherPlayerLostPieces : List Piece
+        , legalMoves : List Move
+        , board : String
+        , history : History
+        , moveSent : Move
+        }
+    | OtherPlayersTurn
+        { mySide : Player
+        , myLostPieces : List Piece
+        , otherPlayerLostPieces : List Piece
+        , board : String
+        , history : History
+        }
+    | GameOver
+        { mySide : Player
+        , myLostPieces : List Piece
+        , otherPlayerLostPieces : List Piece
+        , board : String
+        , history : History
+        , reason : GameOverReason
+        }
 
 
 type GameOverReason
@@ -52,6 +81,8 @@ type alias ServerGameState =
     , yourPlayer : Player -- TODO I don't like this naming
     , legalMoves : List Move
     , history : History
+    , blackCapturedPieces : List Piece
+    , whiteCapturedPieces : List Piece
     }
 
 
@@ -98,6 +129,8 @@ update msg model =
                             in
                             ( WaitingForMoveToBeAccepted
                                 { mySide = data.mySide
+                                , myLostPieces = data.myLostPieces
+                                , otherPlayerLostPieces = data.otherPlayerLostPieces
                                 , legalMoves = data.legalMoves
                                 , board = data.board
                                 , history = data.history
@@ -131,6 +164,8 @@ update msg model =
                                 Mate winner ->
                                     ( GameOver
                                         { mySide = state.yourPlayer
+                                        , myLostPieces = getLostPieces state.yourPlayer state
+                                        , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
                                         , board = state.board
                                         , history = state.history
                                         , reason = Mate winner
@@ -141,6 +176,8 @@ update msg model =
                                 Resignation winner ->
                                     ( GameOver
                                         { mySide = state.yourPlayer
+                                        , myLostPieces = getLostPieces state.yourPlayer state
+                                        , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
                                         , board = state.board
                                         , history = state.history
                                         , reason = Resignation winner
@@ -167,6 +204,8 @@ update msg model =
                                             if state.yourPlayer == state.playerToMove then
                                                 MyTurn
                                                     { mySide = state.yourPlayer
+                                                    , myLostPieces = getLostPieces state.yourPlayer state
+                                                    , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
                                                     , legalMoves = state.legalMoves
                                                     , board = state.board
                                                     , history = state.history
@@ -176,6 +215,8 @@ update msg model =
                                             else
                                                 OtherPlayersTurn
                                                     { mySide = state.yourPlayer
+                                                    , myLostPieces = getLostPieces state.yourPlayer state
+                                                    , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
                                                     , board = state.board
                                                     , history = state.history
                                                     }
@@ -183,16 +224,37 @@ update msg model =
                             ( newModel, Cmd.none )
 
 
+getLostPieces : Player -> ServerGameState -> List Piece
+getLostPieces myPlayer data =
+    case myPlayer of
+        Player.White ->
+            data.whiteCapturedPieces
+
+        Player.Black ->
+            data.blackCapturedPieces
+
+
+decodeApply : Decoder a -> Decoder (a -> b) -> Decoder b
+decodeApply =
+    Json.Decode.map2 (|>)
+
+required : String -> Decoder a -> Decoder (a -> b) -> Decoder b
+required fieldName itemDecoder functionDecoder =
+    decodeApply (field fieldName itemDecoder) functionDecoder
+
+
 boardStateDecoder : Decoder ServerGameState
 boardStateDecoder =
-    Json.Decode.map7 RawServerGameState
-        (field "board" string)
-        (field "status" string)
-        (field "player_to_move" Player.decode)
-        (field "player_color" Player.decode)
-        (field "legal_moves" (Json.Decode.list moveDecoder))
-        (field "history" (Json.Decode.list moveWithSanDecoder))
-        (field "winner" (Json.Decode.nullable Player.decode))
+    Json.Decode.succeed RawServerGameState
+        |> required "board" string
+        |> required "status" string
+        |> required "player_to_move" Player.decode
+        |> required "player_color" Player.decode
+        |> required "legal_moves" (Json.Decode.list moveDecoder)
+        |> required "history" (Json.Decode.list moveWithSanDecoder)
+        |> required "winner" (Json.Decode.nullable Player.decode)
+        |> required "black_captured_pieces" (Json.Decode.list pieceDecoder)
+        |> required "white_captured_pieces" (Json.Decode.list pieceDecoder)
         |> Json.Decode.andThen validateDecodedState
 
 
@@ -204,7 +266,24 @@ type alias RawServerGameState =
     , legalMoves : List Move
     , history : History
     , winner : Maybe Player
+    , blackCapturedPieces : List Piece
+    , whiteCapturedPieces : List Piece
     }
+
+
+pieceDecoder : Decoder Piece
+pieceDecoder =
+    Json.Decode.string |> Json.Decode.andThen (\s ->
+        case String.toList s of
+            [c] ->
+                case Piece.fromChar c of
+                    Just piece ->
+                        Json.Decode.succeed piece
+                    Nothing ->
+                        Json.Decode.fail ("Unable to decode piece from string " ++ s)
+            _ ->
+                Json.Decode.fail ("I was trying to decode a piece when I found a string with length > 1: " ++ s)
+        )
 
 
 validateDecodedState : RawServerGameState -> Decoder ServerGameState
@@ -242,6 +321,8 @@ validateDecodedState state =
                 , yourPlayer = state.yourPlayer
                 , legalMoves = state.legalMoves
                 , history = state.history
+                , blackCapturedPieces = state.blackCapturedPieces
+                , whiteCapturedPieces = state.whiteCapturedPieces
                 }
 
         Err message ->
