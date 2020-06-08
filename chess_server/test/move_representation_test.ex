@@ -30,6 +30,12 @@ defmodule MoveRepresentationTest do
     assert MR.get_san(fen, legal_moves, mm("h7", "h8", :n)) == "h8=N"
     assert MR.get_san(fen, legal_moves, mm("h7", "g8", :q)) == "hxg8=Q"
   end
+  test "implicit white pawn promotion" do
+    fen = "rnbqkbn1/pppppppP/8/8/8/8/PPPPPPP1/RNBQKBNR w KQq - 0 1"
+    legal_moves = [mm("h7", "h8", :n) , mm("h7", "h8", :q), mm("h7", "h8", :r), mm("h7", "h8", :b), mm("h7", "g8", :n), mm("h7", "g8", :q), mm("h7", "g8", :r), mm("h7", "g8", :b)]
+    assert MR.get_san(fen, legal_moves, mm("h7", "h8")) == "h8=Q"
+    assert MR.get_san(fen, legal_moves, mm("h7", "g8")) == "hxg8=Q"
+  end
 
   test "black pawn promotion" do
     fen = "rnbqkbnr/ppppppp1/8/8/8/8/PPPPPPPp/RNBQKB2 b Qkq - 0 1"
@@ -38,6 +44,12 @@ defmodule MoveRepresentationTest do
     assert MR.get_san(fen, legal_moves, mm("h2", "h1", :r)) == "h1=R"
     assert MR.get_san(fen, legal_moves, mm("h2", "h1", :b)) == "h1=B"
     assert MR.get_san(fen, legal_moves, mm("h2", "h1", :q)) == "h1=Q"
+  end
+
+  test "implicit black pawn promotion" do
+    fen = "rnbqkbnr/ppppppp1/8/8/8/8/PPPPPPPp/RNBQKB2 b Qkq - 0 1"
+    legal_moves = [mm("h2", "h1", :n) , mm("h2", "h1", :q) , mm("h2", "h1", :r) , mm("h2", "h1", :b)]
+    assert MR.get_san(fen, legal_moves, mm("h2", "h1")) == "h1=Q"
   end
 
   test "get_san" do

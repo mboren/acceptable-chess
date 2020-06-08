@@ -25,6 +25,14 @@ defmodule MoveRepresentation do
     "=" <> String.upcase(Atom.to_string(promo))
   end
 
+  def is_promotion?(piece, end_rank) do
+    case {piece, end_rank} do
+      {"P", "8"} -> true
+      {"p", "1"} -> true
+      _ -> false
+    end
+  end
+
   def get_san(fen, legal_moves, move = %{start: start_square, end: end_square}) do
     piece_list = fen_to_piece_list(fen)
     {:ok, piece} = get_piece_at_square(start_square, fen)
@@ -33,10 +41,19 @@ defmodule MoveRepresentation do
     {:ok, %{rank: start_rank, file: start_file}} = get_rank_and_file(start_square)
     {:ok, %{rank: end_rank, file: end_file}} = get_rank_and_file(end_square)
 
+    # if a pawn ends up at the end of the board, but we no promotion is stated,
+    # binbo will automatically make it a queen
+    implicit_promotion =
+      if is_promotion?(piece, end_rank) do
+        "=Q"
+      else
+        ""
+      end
+
     cond do
-      is_straight_pawn_move(piece, start_file, end_file) -> end_square
+      is_straight_pawn_move(piece, start_file, end_file) -> end_square <> implicit_promotion
       is_enpassant?(piece, destination_piece, start_file, end_file) -> Atom.to_string(start_file) <> "x" <> end_square
-      is_pawn_capture?(piece, destination_piece) -> Atom.to_string(start_file) <> "x" <> end_square
+      is_pawn_capture?(piece, destination_piece) -> Atom.to_string(start_file) <> "x" <> end_square <> implicit_promotion
       is_queenside_castle(piece, move) -> "O-O-O"
       is_kingside_castle(piece, move) -> "O-O"
       true ->
