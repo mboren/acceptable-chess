@@ -3,8 +3,6 @@ defmodule MoveRepresentation do
   @type square :: String.t
   @type move :: %{start: String.t, end: String.t} | %{start: String.t, end: String.t, promotion: promo_to}
   @type piece :: String.t
-  @type rank :: String.t
-  @type file :: :a | :b | :c | :d | :e | :f | :g | :h
   @type promo_to :: :q | :r | :b | :n
 
   @spec get_san(String.t(), [move], move) :: String.t()
@@ -102,7 +100,7 @@ defmodule MoveRepresentation do
     end
   end
 
-  @spec determine_context(file, rank, boolean, boolean) :: String.t
+  @spec determine_context(Square.file, Square.rank, boolean, boolean) :: String.t
   def determine_context(start_file, start_rank, is_file_ambiguous, is_rank_ambiguous) do
     case {is_file_ambiguous, is_rank_ambiguous} do
       {false, _} -> Atom.to_string(start_file)

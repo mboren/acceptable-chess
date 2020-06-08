@@ -2,12 +2,9 @@ defmodule Position do
   @moduledoc """
   Used for working with FEN formatted chess positions
   """
-
-  @type square :: String.t
   @type piece :: String.t
-  @type file :: :a | :b | :c | :d | :e | :f | :g | :h
 
-  @spec get_piece_at_square(square, String.t) :: {:ok, piece} | {:error, any}
+  @spec get_piece_at_square(Square.square, String.t) :: {:ok, piece} | {:error, any}
   def get_piece_at_square(square, fen) do
     piece_list = fen_to_piece_list(fen)
     with {:ok, index} <- square_to_index(square) do
@@ -16,7 +13,7 @@ defmodule Position do
   end
 
 
-  @spec square_to_index(square) :: {:ok, 0..63} | {:error, any}
+  @spec square_to_index(Square.square) :: {:ok, 0..63} | {:error, any}
   def square_to_index(square) do
     with [file_string, rank] <- String.codepoints(square),
          {:ok, file} <- Square.file_from_string(file_string),
@@ -66,7 +63,7 @@ defmodule Position do
   end
 
 
-  @spec file_to_digit(file) :: {:ok, 1..8} | {:error, any}
+  @spec file_to_digit(Square.file) :: {:ok, 1..8} | {:error, any}
   def file_to_digit(character) do
     case character do
       :a -> {:ok, 1}

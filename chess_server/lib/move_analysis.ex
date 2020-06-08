@@ -8,8 +8,6 @@ defmodule MoveAnalysis do
   @type square :: String.t
   @type move :: %{start: String.t, end: String.t} | %{start: String.t, end: String.t, promotion: promo_to}
   @type piece :: String.t
-  @type rank :: String.t
-  @type file :: :a | :b | :c | :d | :e | :f | :g | :h
   @type promo_to :: :q | :r | :b | :n
 
 
@@ -21,7 +19,7 @@ defmodule MoveAnalysis do
     end
   end
 
-  @spec is_enpassant?(piece, piece, file, file) :: boolean
+  @spec is_enpassant?(piece, piece, Square.file, Square.file) :: boolean
   def is_enpassant?(piece, piece_at_destination, start_file, end_file) do
     is_pawn?(piece) and piece_at_destination == " " and start_file != end_file
   end
@@ -64,7 +62,7 @@ defmodule MoveAnalysis do
     false
   end
 
-  @spec is_straight_pawn_move(piece, file, file) :: boolean
+  @spec is_straight_pawn_move(piece, Square.file, Square.file) :: boolean
   def is_straight_pawn_move("p", start_file, end_file) when start_file == end_file do
     true
   end
