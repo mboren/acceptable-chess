@@ -11,6 +11,27 @@ defmodule MoveAnalysis do
   @type promo_to :: :q | :r | :b | :n
 
 
+
+  @spec get_captured_piece(move, Position.fen) :: piece | nil
+  def get_captured_piece(move, fen) do
+    piece_list = Position.fen_to_piece_list(fen)
+    start_square = get_move_start(move)
+    end_square = get_move_end(move)
+    {:ok, piece_at_start} = Position.get_piece_at_square(start_square, piece_list)
+    {:ok, piece_at_end} = Position.get_piece_at_square(end_square, piece_list)
+    {:ok, %{rank: _, file: start_file}} = Square.get_rank_and_file(start_square)
+    {:ok, %{rank: _, file: end_file}} = Square.get_rank_and_file(end_square)
+    cond do
+      piece_at_end != " " -> piece_at_end
+      is_enpassant?(piece_at_start, piece_at_end, start_file, end_file) ->
+        case piece_at_start do
+          "p" -> "P"
+          "P" -> "p"
+        end
+      true -> nil
+    end
+  end
+
   def is_promotion?(piece, end_rank) do
     case {piece, end_rank} do
       {"P", "8"} -> true

@@ -4,7 +4,9 @@ defmodule ChessApp.Game do
     white_player: nil,
     black_player: nil,
     history: [],
-    player_resigned: nil
+    player_resigned: nil,
+    black_captured_pieces: [],
+    white_captured_pieces: []
   )
   @type player_id :: reference
   @type player_color :: :white | :black
@@ -54,12 +56,14 @@ defmodule ChessApp.Game do
     other_player_id
   end
 
+  @spec make_move(player_id, move, %ChessApp.Game{}) :: %ChessApp.Game{}
   def make_move(player_id, move, state = %ChessApp.Game{game_server: pid, player_resigned: nil}) do
     {:ok, color_to_move} = :binbo.side_to_move(pid)
     player_color = get_player_color(player_id, state)
     {:ok, fen} = get_board_state(state)
     if color_to_move == player_color do
       add_move_to_history(:binbo.move(pid, move_map_to_string(move)), move_from_map(move), fen, state)
+      |> add_captured_piece(player_color, move, fen)
     else
       state
     end
@@ -88,6 +92,21 @@ defmodule ChessApp.Game do
     Map.put(state, :history, [move_with_san | state.history])
   end
 
+  defp add_captured_piece(state, player_to_move, move, fen) do
+    move = move_from_map(move)
+    captured_piece = MoveAnalysis.get_captured_piece(move, fen)
+    case captured_piece do
+      nil -> state
+      piece ->
+        case player_to_move do
+          :white ->
+            Map.put(state, :black_captured_pieces, [piece | state.black_captured_pieces])
+          :black ->
+            Map.put(state, :white_captured_pieces, [piece | state.white_captured_pieces])
+        end
+    end
+  end
+
   defp add_move_to_history({:error, _}, _move, state) do
     state
   end
@@ -111,6 +130,8 @@ defmodule ChessApp.Game do
       status: status,
       winner: get_winner(status, player_to_move, state),
       history: history,
+      black_captured_pieces: state.black_captured_pieces,
+      white_captured_pieces: state.white_captured_pieces,
     }
   end
 
