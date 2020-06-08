@@ -413,48 +413,43 @@ view model =
     , body =
         [ Element.layout
             []
-            (case model of
-                GameOver data ->
-                    let
-                        reasonText =
-                            case data.reason of
-                                Mate winner ->
-                                    Player.toString winner ++ " wins!"
+            (Element.column
+                [ Element.width Element.fill ]
+                (case model of
+                    GameOver data ->
+                        let
+                            reasonText =
+                                case data.reason of
+                                    Mate winner ->
+                                        Player.toString winner ++ " wins!"
 
-                                Resignation winner ->
-                                    Player.toString winner ++ " wins by resignation"
-                    in
-                    Element.column
-                        [ Element.width Element.fill ]
+                                    Resignation winner ->
+                                        Player.toString winner ++ " wins by resignation"
+                        in
                         [ drawCommonGameItems data selectablePieces selectableMoves
                         , Element.text reasonText
                         ]
 
-                WaitingForInitialization ->
-                    Element.text "waiting for state from backend"
+                    WaitingForInitialization ->
+                        [ Element.text "waiting for state from backend" ]
 
-                MyTurn data ->
-                    Element.column
-                        [ Element.width Element.fill ]
+                    MyTurn data ->
                         [ drawCommonGameItems data selectablePieces selectableMoves
                         , resignButton
                         ]
 
-                WaitingForMoveToBeAccepted data ->
-                    Element.column
-                        [ Element.width Element.fill ]
+                    WaitingForMoveToBeAccepted data ->
                         [ drawCommonGameItems data selectablePieces selectableMoves
                         , Element.text "waiting"
                         , resignButton
                         ]
 
-                OtherPlayersTurn data ->
-                    Element.column
-                        [ Element.width Element.fill ]
+                    OtherPlayersTurn data ->
                         [ drawCommonGameItems data selectablePieces selectableMoves
                         , Element.text "waiting for other player to move"
                         , resignButton
                         ]
+                )
             )
         ]
     }
