@@ -64,6 +64,16 @@ type Model
         }
 
 
+type alias CommonModelData a =
+    { a
+        | history : History
+        , otherPlayerLostPieces : List Piece
+        , myLostPieces : List Piece
+        , board : String
+        , mySide : Player
+    }
+
+
 type GameOverReason
     = Mate Player
     | Resignation Player
@@ -416,11 +426,8 @@ view model =
                     in
                     Element.column
                         [ Element.width Element.fill ]
-                        [ drawCapturedPieces data.otherPlayerLostPieces
-                        , Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
-                        , drawCapturedPieces data.myLostPieces
+                        [ drawCommonGameItems data selectablePieces selectableMoves
                         , Element.text reasonText
-                        , history data.history
                         ]
 
                 WaitingForInitialization ->
@@ -429,37 +436,39 @@ view model =
                 MyTurn data ->
                     Element.column
                         [ Element.width Element.fill ]
-                        [ drawCapturedPieces data.otherPlayerLostPieces
-                        , Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
-                        , drawCapturedPieces data.myLostPieces
+                        [ drawCommonGameItems data selectablePieces selectableMoves
                         , resignButton
-                        , history data.history
                         ]
 
                 WaitingForMoveToBeAccepted data ->
                     Element.column
                         [ Element.width Element.fill ]
-                        [ drawCapturedPieces data.otherPlayerLostPieces
-                        , Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
-                        , drawCapturedPieces data.myLostPieces
+                        [ drawCommonGameItems data selectablePieces selectableMoves
                         , Element.text "waiting"
                         , resignButton
-                        , history data.history
                         ]
 
                 OtherPlayersTurn data ->
                     Element.column
                         [ Element.width Element.fill ]
-                        [ drawCapturedPieces data.otherPlayerLostPieces
-                        , Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
-                        , drawCapturedPieces data.myLostPieces
+                        [ drawCommonGameItems data selectablePieces selectableMoves
                         , Element.text "waiting for other player to move"
                         , resignButton
-                        , history data.history
                         ]
             )
         ]
     }
+
+
+drawCommonGameItems : CommonModelData a -> ( Set Square, Square -> Msg ) -> ( Set Square, Square -> Msg ) -> Element Msg
+drawCommonGameItems data selectablePieces selectableMoves =
+    Element.column
+        [ Element.width Element.fill ]
+        [ history data.history
+        , drawCapturedPieces data.otherPlayerLostPieces
+        , Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+        , drawCapturedPieces data.myLostPieces
+        ]
 
 
 resignButton : Element Msg
