@@ -3,6 +3,7 @@ port module Main exposing (..)
 import Board
 import Browser exposing (Document)
 import Element exposing (Element)
+import Element.Background
 import Element.Input
 import Json.Decode exposing (Decoder, field, string)
 import Move exposing (Move, MoveWithSan)
@@ -471,8 +472,10 @@ drawCapturedPieces pieces =
     |> String.join ""
     |> Element.text
 
+
 history : History -> Element Msg
 history hist =
     List.map .san hist
-        |> String.join ", "
-        |> Element.text
+        |> List.map Element.text
+        |> List.map (Element.el [ Element.Background.color (Element.rgb255 128 128 128), Element.padding 5 ])
+        |> Element.row [ Element.spacing 5 ]
