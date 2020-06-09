@@ -27,6 +27,7 @@ port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
 type alias History =
     List MoveWithSan
 
+maxWidth = 700
 
 type alias Model =
     { gameModel : GameModel
@@ -435,13 +436,16 @@ view model =
     let
         ( selectablePieces, selectableMoves ) =
             getClickableSquares model.gameModel
+        width = min model.innerWidth maxWidth
     in
     { title = "chess"
     , body =
         [ Element.layout
             []
             (Element.column
-                [ Element.width Element.fill ]
+                [ Element.width (Element.px (8 * (width // 8)))
+                , Element.centerX
+                ]
                 (case model.gameModel of
                     GameOver data ->
                         let
@@ -453,7 +457,7 @@ view model =
                                     Resignation winner ->
                                         Player.toString winner ++ " wins by resignation"
                         in
-                        [ drawCommonGameItems model.innerWidth data selectablePieces selectableMoves
+                        [ drawCommonGameItems width data selectablePieces selectableMoves
                         , Element.text reasonText
                         ]
 
@@ -461,18 +465,18 @@ view model =
                         [ Element.text "waiting for state from backend" ]
 
                     MyTurn data ->
-                        [ drawCommonGameItems model.innerWidth data selectablePieces selectableMoves
+                        [ drawCommonGameItems width data selectablePieces selectableMoves
                         , resignButton
                         ]
 
                     WaitingForMoveToBeAccepted data ->
-                        [ drawCommonGameItems model.innerWidth data selectablePieces selectableMoves
+                        [ drawCommonGameItems width data selectablePieces selectableMoves
                         , Element.text "waiting"
                         , resignButton
                         ]
 
                     OtherPlayersTurn data ->
-                        [ drawCommonGameItems model.innerWidth data selectablePieces selectableMoves
+                        [ drawCommonGameItems width data selectablePieces selectableMoves
                         , Element.text "waiting for other player to move"
                         , resignButton
                         ]
@@ -516,4 +520,4 @@ history hist =
     List.map .san hist
         |> List.map Element.text
         |> List.map (Element.el [ Element.Background.color (Element.rgb255 128 128 128), Element.padding 5 ])
-        |> Element.row [ Element.spacing 5 ]
+        |> Element.row [ Element.width Element.fill, Element.spacing 5, Element.scrollbarX ]
