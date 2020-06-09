@@ -2,6 +2,7 @@ port module Main exposing (..)
 
 import Board
 import Browser exposing (Document)
+import Browser.Events
 import Element exposing (Element)
 import Element.Background
 import Element.Border as Border
@@ -128,14 +129,20 @@ type Msg
     | NewSelectedMoveStart Square
     | NewSelectedMoveEnd Square
     | Resign
+    | WindowResized Int Int
+
 
 updateGameModel : Model -> GameModel -> Model
 updateGameModel model newGameModel =
     { model | gameModel = newGameModel }
 
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        WindowResized width height ->
+            ( { model | innerWidth = width, innerHeight = height }, Cmd.none )
+
         NewSelectedMoveStart square ->
             case model.gameModel of
                 MyTurn data ->
@@ -383,7 +390,10 @@ moveWithSanDecoder =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    messageReceiver GetState
+    Sub.batch
+        [ messageReceiver GetState
+        , Browser.Events.onResize WindowResized
+        ]
 
 
 getSelectablePieces : List Move -> Set Square
@@ -443,7 +453,7 @@ view model =
                                     Resignation winner ->
                                         Player.toString winner ++ " wins by resignation"
                         in
-                        [ drawCommonGameItems data selectablePieces selectableMoves
+                        [ drawCommonGameItems model.innerWidth data selectablePieces selectableMoves
                         , Element.text reasonText
                         ]
 
@@ -451,18 +461,18 @@ view model =
                         [ Element.text "waiting for state from backend" ]
 
                     MyTurn data ->
-                        [ drawCommonGameItems data selectablePieces selectableMoves
+                        [ drawCommonGameItems model.innerWidth data selectablePieces selectableMoves
                         , resignButton
                         ]
 
                     WaitingForMoveToBeAccepted data ->
-                        [ drawCommonGameItems data selectablePieces selectableMoves
+                        [ drawCommonGameItems model.innerWidth data selectablePieces selectableMoves
                         , Element.text "waiting"
                         , resignButton
                         ]
 
                     OtherPlayersTurn data ->
-                        [ drawCommonGameItems data selectablePieces selectableMoves
+                        [ drawCommonGameItems model.innerWidth data selectablePieces selectableMoves
                         , Element.text "waiting for other player to move"
                         , resignButton
                         ]
@@ -472,13 +482,13 @@ view model =
     }
 
 
-drawCommonGameItems : CommonModelData a -> ( Set Square, Square -> Msg ) -> ( Set Square, Square -> Msg ) -> Element Msg
-drawCommonGameItems data selectablePieces selectableMoves =
+drawCommonGameItems : Int -> CommonModelData a -> ( Set Square, Square -> Msg ) -> ( Set Square, Square -> Msg ) -> Element Msg
+drawCommonGameItems innerWidth data selectablePieces selectableMoves =
     Element.column
         [ Element.width Element.fill ]
         [ history data.history
         , drawCapturedPieces data.otherPlayerLostPieces
-        , Board.drawFromFen data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+        , Board.drawFromFen innerWidth data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
         , drawCapturedPieces data.myLostPieces
         ]
 

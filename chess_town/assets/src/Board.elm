@@ -14,11 +14,11 @@ type alias Board =
     List (List (Maybe Piece))
 
 
-drawFromFen : String -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Element msg -> Element msg
-drawFromFen fen selectablePieces selectableMoves bottomPlayer errorElement =
+drawFromFen : Int -> String -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Element msg -> Element msg
+drawFromFen screenWidth fen selectablePieces selectableMoves bottomPlayer errorElement =
     fen
         |> fenToBoard
-        |> Maybe.map (\board -> draw board selectablePieces selectableMoves bottomPlayer)
+        |> Maybe.map (\board -> draw screenWidth board selectablePieces selectableMoves bottomPlayer)
         |> Maybe.withDefault errorElement
 
 
@@ -61,9 +61,11 @@ replaceNumbers processed unprocessed =
                 replaceNumbers (processed ++ String.fromChar head) tail
 
 
-draw : Board -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Element msg
-draw board ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) currentPlayer =
+draw : Int -> Board -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Element msg
+draw screenWidth board ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) currentPlayer =
     let
+        squareWidth = screenWidth // 8
+
         files =
             [ "a", "b", "c", "d", "e", "f", "g", "h" ]
 
@@ -80,7 +82,7 @@ draw board ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares,
         drawRow row rowCoords =
             Element.row
                 []
-                (List.map2 (drawSquare (Element.px 45) ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent )) row rowCoords)
+                (List.map2 (drawSquare (Element.px squareWidth) ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent )) row rowCoords)
     in
     Element.column
         [ Element.width Element.fill ]
