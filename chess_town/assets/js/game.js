@@ -25,7 +25,7 @@ chatInput.addEventListener("keypress", event => {
 
 var app = Elm.Main.init({
   node: document.getElementById('elm-main'),
-
+  flags: {innerWidth: window.innerWidth, innerHeight: window.innerHeight},
 });
 
 channel.on("new_msg", payload => {

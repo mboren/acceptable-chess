@@ -27,7 +27,14 @@ type alias History =
     List MoveWithSan
 
 
-type Model
+type alias Model =
+    { gameModel : GameModel
+    , innerWidth : Int
+    , innerHeight : Int
+    }
+
+
+type GameModel
     = WaitingForInitialization
     | MyTurn
         { mySide : Player
@@ -101,11 +108,12 @@ type alias ServerGameState =
     }
 
 
-init _ =
-    ( WaitingForInitialization, sendMessage "ready" )
+init : { innerWidth : Int, innerHeight : Int } -> ( Model, Cmd Msg )
+init { innerWidth, innerHeight } =
+    ( Model WaitingForInitialization innerWidth innerHeight, sendMessage "ready" )
 
 
-main : Program () Model Msg
+main : Program { innerWidth : Int, innerHeight : Int } Model Msg
 main =
     Browser.document
         { init = init
@@ -121,20 +129,23 @@ type Msg
     | NewSelectedMoveEnd Square
     | Resign
 
+updateGameModel : Model -> GameModel -> Model
+updateGameModel model newGameModel =
+    { model | gameModel = newGameModel }
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         NewSelectedMoveStart square ->
-            case model of
+            case model.gameModel of
                 MyTurn data ->
-                    ( MyTurn { data | selection = SelectingEnd square }, Cmd.none )
+                    ( updateGameModel model (MyTurn { data | selection = SelectingEnd square }), Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
 
         NewSelectedMoveEnd end ->
-            case model of
+            case model.gameModel of
                 MyTurn data ->
                     case data.selection of
                         SelectingEnd start ->
@@ -142,15 +153,17 @@ update msg model =
                                 move =
                                     Move start end
                             in
-                            ( WaitingForMoveToBeAccepted
-                                { mySide = data.mySide
-                                , myLostPieces = data.myLostPieces
-                                , otherPlayerLostPieces = data.otherPlayerLostPieces
-                                , legalMoves = data.legalMoves
-                                , board = data.board
-                                , history = data.history
-                                , moveSent = move
-                                }
+                            ( updateGameModel model
+                                (WaitingForMoveToBeAccepted
+                                    { mySide = data.mySide
+                                    , myLostPieces = data.myLostPieces
+                                    , otherPlayerLostPieces = data.otherPlayerLostPieces
+                                    , legalMoves = data.legalMoves
+                                    , board = data.board
+                                    , history = data.history
+                                    , moveSent = move
+                                    }
+                                )
                             , sendMove move
                             )
 
@@ -177,33 +190,37 @@ update msg model =
                         Over reason ->
                             case reason of
                                 Mate winner ->
-                                    ( GameOver
-                                        { mySide = state.yourPlayer
-                                        , myLostPieces = getLostPieces state.yourPlayer state
-                                        , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
-                                        , board = state.board
-                                        , history = state.history
-                                        , reason = Mate winner
-                                        }
+                                    ( updateGameModel model
+                                        (GameOver
+                                            { mySide = state.yourPlayer
+                                            , myLostPieces = getLostPieces state.yourPlayer state
+                                            , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
+                                            , board = state.board
+                                            , history = state.history
+                                            , reason = Mate winner
+                                            }
+                                        )
                                     , Cmd.none
                                     )
 
                                 Resignation winner ->
-                                    ( GameOver
-                                        { mySide = state.yourPlayer
-                                        , myLostPieces = getLostPieces state.yourPlayer state
-                                        , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
-                                        , board = state.board
-                                        , history = state.history
-                                        , reason = Resignation winner
-                                        }
+                                    ( updateGameModel model
+                                        (GameOver
+                                            { mySide = state.yourPlayer
+                                            , myLostPieces = getLostPieces state.yourPlayer state
+                                            , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
+                                            , board = state.board
+                                            , history = state.history
+                                            , reason = Resignation winner
+                                            }
+                                        )
                                     , Cmd.none
                                     )
 
                         Continue ->
                             let
                                 selection =
-                                    case model of
+                                    case model.gameModel of
                                         MyTurn data ->
                                             data.selection
 
@@ -211,9 +228,9 @@ update msg model =
                                             SelectingStart
 
                                 newModel =
-                                    case model of
+                                    case model.gameModel of
                                         GameOver _ ->
-                                            model |> Debug.log "got continue after game over"
+                                            model.gameModel |> Debug.log "got continue after game over"
 
                                         _ ->
                                             if state.yourPlayer == state.playerToMove then
@@ -236,7 +253,7 @@ update msg model =
                                                     , history = state.history
                                                     }
                             in
-                            ( newModel, Cmd.none )
+                            ( updateGameModel model newModel, Cmd.none )
 
 
 getLostPieces : Player -> ServerGameState -> List Piece
@@ -382,7 +399,7 @@ getPossibleMoveEndsFromSquare start moves =
         |> Set.fromList
 
 
-getClickableSquares : Model -> ( ( Set Square, Square -> Msg ), ( Set Square, Square -> Msg ) )
+getClickableSquares : GameModel -> ( ( Set Square, Square -> Msg ), ( Set Square, Square -> Msg ) )
 getClickableSquares model =
     case model of
         MyTurn data ->
@@ -407,7 +424,7 @@ view : Model -> Document Msg
 view model =
     let
         ( selectablePieces, selectableMoves ) =
-            getClickableSquares model
+            getClickableSquares model.gameModel
     in
     { title = "chess"
     , body =
@@ -415,7 +432,7 @@ view model =
             []
             (Element.column
                 [ Element.width Element.fill ]
-                (case model of
+                (case model.gameModel of
                     GameOver data ->
                         let
                             reasonText =
