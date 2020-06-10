@@ -525,4 +525,10 @@ history hist =
     List.map .san hist
         |> List.map Element.text
         |> List.map (Element.el [ Element.Background.color (Element.rgb255 128 128 128), Element.padding 5 ])
-        |> Element.row [ Element.width Element.fill, Element.spacing 5, Element.scrollbarX ]
+        |> Element.row
+            [ Element.width Element.fill
+            , Element.height (Element.px 20)
+            , Element.spacing 5
+            , Element.paddingXY 0 25
+            , Element.scrollbarX
+            ]
