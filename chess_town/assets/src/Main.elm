@@ -2,17 +2,20 @@ port module Main exposing (..)
 
 import Board
 import Browser exposing (Document)
+import Browser.Dom as Dom
 import Browser.Events
 import Element exposing (Element)
 import Element.Background
 import Element.Border as Border
 import Element.Input
+import Html.Attributes
 import Json.Decode exposing (Decoder, field, string)
 import Move exposing (Move, MoveWithSan)
 import Piece exposing (Piece)
 import Player exposing (Player)
 import Set exposing (Set)
 import Square exposing (Square)
+import Task
 
 
 port sendMessage : String -> Cmd msg
@@ -31,6 +34,7 @@ type alias History =
 maxWidth =
     700
 
+historyId = "history"
 
 type alias Model =
     { gameModel : GameModel
@@ -134,6 +138,7 @@ type Msg
     | NewSelectedMoveEnd Square
     | Resign
     | WindowResized Int Int
+    | NoOp
 
 
 updateGameModel : Model -> GameModel -> Model
@@ -144,6 +149,9 @@ updateGameModel model newGameModel =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        NoOp ->
+            ( model, Cmd.none )
+
         WindowResized width height ->
             ( { model | innerWidth = width, innerHeight = height }, Cmd.none )
 
@@ -197,6 +205,14 @@ update msg model =
                     ( model, Cmd.none )
 
                 Ok state ->
+                    let
+                        command =
+                            if List.length state.history /= List.length (getHistory model.gameModel) then
+                                scrollRight historyId
+
+                            else
+                                Cmd.none
+                    in
                     case state.status of
                         Over reason ->
                             case reason of
@@ -211,7 +227,7 @@ update msg model =
                                             , reason = Mate winner
                                             }
                                         )
-                                    , Cmd.none
+                                    , command
                                     )
 
                                 Resignation winner ->
@@ -225,7 +241,7 @@ update msg model =
                                             , reason = Resignation winner
                                             }
                                         )
-                                    , Cmd.none
+                                    , command
                                     )
 
                         Continue ->
@@ -264,7 +280,38 @@ update msg model =
                                                     , history = state.history
                                                     }
                             in
-                            ( updateGameModel model newModel, Cmd.none )
+                            ( updateGameModel model newModel, command )
+
+
+getHistory : GameModel -> History
+getHistory model =
+    case model of
+        WaitingForInitialization ->
+            []
+
+        MyTurn data ->
+            data.history
+
+        OtherPlayersTurn data ->
+            data.history
+
+        WaitingForMoveToBeAccepted data ->
+            data.history
+
+        GameOver data ->
+            data.history
+
+
+scrollRight : String -> Cmd Msg
+scrollRight id =
+    Task.attempt (\_ -> NoOp)
+        (Dom.getViewportOf id
+            |> Task.andThen
+                (\vp ->
+                    Dom.setViewportOf id vp.scene.width 0
+                        |> Task.onError (\_ -> Task.succeed ())
+                )
+        )
 
 
 getLostPieces : Player -> ServerGameState -> List Piece
@@ -523,6 +570,7 @@ drawCapturedPieces pieces =
 history : History -> Element Msg
 history hist =
     List.map .san hist
+        |> List.reverse
         |> List.map Element.text
         |> List.map (Element.el [ Element.Background.color (Element.rgb255 128 128 128), Element.padding 5 ])
         |> Element.row
@@ -531,4 +579,5 @@ history hist =
             , Element.spacing 5
             , Element.paddingXY 0 25
             , Element.scrollbarX
+            , Element.htmlAttribute (Html.Attributes.id historyId)
             ]
