@@ -579,5 +579,6 @@ history hist =
             , Element.spacing 5
             , Element.paddingXY 0 25
             , Element.scrollbarX
+            , Element.clipY
             , Element.htmlAttribute (Html.Attributes.id historyId)
             ]
