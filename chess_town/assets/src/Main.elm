@@ -575,9 +575,9 @@ history hist =
         |> List.map (Element.el [ Element.Background.color (Element.rgb255 128 128 128), Element.padding 5 ])
         |> Element.row
             [ Element.width Element.fill
-            , Element.height (Element.px 20)
+            , Element.height (Element.px 50)
             , Element.spacing 5
-            , Element.paddingXY 0 25
+            , Element.paddingXY 0 0
             , Element.scrollbarX
             , Element.clipY
             , Element.htmlAttribute (Html.Attributes.id historyId)
