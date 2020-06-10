@@ -563,6 +563,7 @@ drawCapturedPieces : List Piece -> Element Msg
 drawCapturedPieces pieces =
     List.map Piece.toIconString pieces
         |> List.sort
+        |> List.append [ " " ]
         |> String.join ""
         |> Element.text
 
