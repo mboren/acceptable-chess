@@ -27,7 +27,10 @@ port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
 type alias History =
     List MoveWithSan
 
-maxWidth = 700
+
+maxWidth =
+    700
+
 
 type alias Model =
     { gameModel : GameModel
@@ -436,14 +439,16 @@ view model =
     let
         ( selectablePieces, selectableMoves ) =
             getClickableSquares model.gameModel
-        width = min model.innerWidth maxWidth
+
+        width =
+            min model.innerWidth maxWidth
     in
     { title = "chess"
     , body =
         [ Element.layout
             []
             (Element.column
-                [ Element.width (Element.px (8 * (width // 8)))
+                [ Element.width (Element.fill |> Element.maximum maxWidth)
                 , Element.centerX
                 ]
                 (case model.gameModel of

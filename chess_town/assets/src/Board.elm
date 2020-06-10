@@ -64,8 +64,6 @@ replaceNumbers processed unprocessed =
 draw : Int -> Board -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Element msg
 draw screenWidth board ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) currentPlayer =
     let
-        squareWidth = screenWidth // 8
-
         files =
             [ "a", "b", "c", "d", "e", "f", "g", "h" ]
 
@@ -81,11 +79,15 @@ draw screenWidth board ( selectablePieceSquares, selectPieceEvent ) ( selectable
         drawRow : List (Maybe Piece) -> List Square -> Element msg
         drawRow row rowCoords =
             Element.row
-                []
-                (List.map2 (drawSquare (Element.px squareWidth) ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent )) row rowCoords)
+                [ Element.width Element.fill
+                , Element.height Element.fill
+                ]
+                (List.map2 (drawSquare ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent )) row rowCoords)
     in
     Element.column
-        [ Element.width Element.fill ]
+        [ Element.width (Element.px screenWidth)
+        , Element.height (Element.px screenWidth)
+        ]
         (List.map2 drawRow (orientBoard currentPlayer board) (orientBoard currentPlayer coordinates))
 
 
@@ -101,8 +103,8 @@ possibleMoveOverlay =
         Element.none
 
 
-drawSquare : Element.Length -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Maybe Piece -> Square -> Element msg
-drawSquare size ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) maybePiece square =
+drawSquare : ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Maybe Piece -> Square -> Element msg
+drawSquare ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) maybePiece square =
     let
         color =
             if Square.isLight square then
@@ -131,8 +133,8 @@ drawSquare size ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSqu
     Element.el
         ([ Background.color color
          , Element.padding 0
-         , Element.width size
-         , Element.height size
+         , Element.width Element.fill
+         , Element.height Element.fill
          , Element.inFront overlay
          ]
             ++ event
