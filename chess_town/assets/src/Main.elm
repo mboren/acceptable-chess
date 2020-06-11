@@ -672,4 +672,5 @@ history hist =
             , Element.scrollbarX
             , Element.clipY
             , Element.htmlAttribute (Html.Attributes.id historyId)
+            , Element.Background.color (Element.rgb255 190 190 190)
             ]
