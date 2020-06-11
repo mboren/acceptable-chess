@@ -5,6 +5,10 @@ import History
 import Test exposing (..)
 
 
+identityRender =
+    History.render identity identity
+
+
 suite : Test
 suite =
     describe "History tests"
@@ -50,7 +54,25 @@ suite =
             , test "three items" <|
                 \_ ->
                     Expect.equal (Just 3) (History.getLastPly { pastMoves = [ ( 1, 2 ) ], incompleteMove = Just 3 })
-
-
+            ]
+        , describe "History.render" <|
+            [ test "empty" <|
+                \_ ->
+                    Expect.equal (identityRender History.empty) []
+            , test "single item" <|
+                \_ ->
+                    Expect.equal [ 1, 1 ] (identityRender { pastMoves = [], incompleteMove = Just 1 })
+            , test "two items" <|
+                \_ ->
+                    Expect.equal [ 1, 1, 2 ] (identityRender { pastMoves = [ ( 1, 2 ) ], incompleteMove = Nothing })
+            , test "three items" <|
+                \_ ->
+                    Expect.equal [ 1, 1, 2, 2, 3 ] (identityRender { pastMoves = [ ( 1, 2 ) ], incompleteMove = Just 3 })
+            , test "four items" <|
+                \_ ->
+                    Expect.equal [ 1, 1, 2, 2, 3, 4 ] (identityRender { pastMoves = [ ( 3, 4 ), ( 1, 2 ) ], incompleteMove = Nothing })
+            , test "five items" <|
+                \_ ->
+                    Expect.equal [ 1, 1, 2, 2, 3, 4, 3, 5 ] (identityRender { pastMoves = [ ( 3, 4 ), ( 1, 2 ) ], incompleteMove = Just 5 })
             ]
         ]

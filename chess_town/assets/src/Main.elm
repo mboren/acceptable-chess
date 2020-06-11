@@ -8,6 +8,7 @@ import Element exposing (Element)
 import Element.Background
 import Element.Border as Border
 import Element.Input
+import History exposing (History)
 import Html.Attributes
 import Json.Decode exposing (Decoder, field, string)
 import Move exposing (Move, MoveWithSan)
@@ -27,14 +28,13 @@ port sendMove : Move -> Cmd msg
 port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
 
 
-type alias History =
-    List MoveWithSan
-
-
 maxWidth =
     700
 
-historyId = "history"
+
+historyId =
+    "history"
+
 
 type alias Model =
     { gameModel : GameModel
@@ -51,7 +51,7 @@ type GameModel
         , otherPlayerLostPieces : List Piece
         , legalMoves : List Move
         , board : String
-        , history : History
+        , history : History MoveWithSan
         , selection : Selection
         }
     | WaitingForMoveToBeAccepted
@@ -60,7 +60,7 @@ type GameModel
         , otherPlayerLostPieces : List Piece
         , legalMoves : List Move
         , board : String
-        , history : History
+        , history : History MoveWithSan
         , moveSent : Move
         }
     | OtherPlayersTurn
@@ -68,21 +68,21 @@ type GameModel
         , myLostPieces : List Piece
         , otherPlayerLostPieces : List Piece
         , board : String
-        , history : History
+        , history : History MoveWithSan
         }
     | GameOver
         { mySide : Player
         , myLostPieces : List Piece
         , otherPlayerLostPieces : List Piece
         , board : String
-        , history : History
+        , history : History MoveWithSan
         , reason : GameOverReason
         }
 
 
 type alias CommonModelData a =
     { a
-        | history : History
+        | history : History MoveWithSan
         , otherPlayerLostPieces : List Piece
         , myLostPieces : List Piece
         , board : String
@@ -111,7 +111,7 @@ type alias ServerGameState =
     , playerToMove : Player
     , yourPlayer : Player -- TODO I don't like this naming
     , legalMoves : List Move
-    , history : History
+    , history : History MoveWithSan
     , blackCapturedPieces : List Piece
     , whiteCapturedPieces : List Piece
     }
@@ -207,7 +207,7 @@ update msg model =
                 Ok state ->
                     let
                         command =
-                            if List.length state.history /= List.length (getHistory model.gameModel) then
+                            if state.history /= getHistory model.gameModel then
                                 scrollRight historyId
 
                             else
@@ -283,11 +283,11 @@ update msg model =
                             ( updateGameModel model newModel, command )
 
 
-getHistory : GameModel -> History
+getHistory : GameModel -> History MoveWithSan
 getHistory model =
     case model of
         WaitingForInitialization ->
-            []
+            History.empty
 
         MyTurn data ->
             data.history
@@ -342,7 +342,10 @@ boardStateDecoder =
         |> required "player_to_move" Player.decode
         |> required "player_color" Player.decode
         |> required "legal_moves" (Json.Decode.list moveDecoder)
-        |> required "history" (Json.Decode.list moveWithSanDecoder)
+        |> required "history"
+            (Json.Decode.list moveWithSanDecoder
+                |> Json.Decode.andThen (List.reverse >> History.fromList >> Json.Decode.succeed)
+            )
         |> required "winner" (Json.Decode.nullable Player.decode)
         |> required "black_captured_pieces" (Json.Decode.list pieceDecoder)
         |> required "white_captured_pieces" (Json.Decode.list pieceDecoder)
@@ -355,7 +358,7 @@ type alias RawServerGameState =
     , playerToMove : Player
     , yourPlayer : Player
     , legalMoves : List Move
-    , history : History
+    , history : History MoveWithSan
     , winner : Maybe Player
     , blackCapturedPieces : List Piece
     , whiteCapturedPieces : List Piece
@@ -568,12 +571,16 @@ drawCapturedPieces pieces =
         |> Element.text
 
 
-history : History -> Element Msg
+history : History MoveWithSan -> Element Msg
 history hist =
-    List.map .san hist
-        |> List.reverse
-        |> List.map Element.text
-        |> List.map (Element.el [ Element.Background.color (Element.rgb255 128 128 128), Element.padding 5 ])
+    let
+        renderPly ply =
+            Element.el [ Element.Background.color (Element.rgb255 128 128 128), Element.padding 5 ] (Element.text ply.san)
+
+        renderNumber i =
+            Element.el [ Element.padding 5 ] (Element.text (String.fromInt i ++ "."))
+    in
+    History.render renderPly renderNumber hist
         |> Element.row
             [ Element.width Element.fill
             , Element.height (Element.px 50)
