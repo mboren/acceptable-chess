@@ -7,6 +7,7 @@ import Browser.Events
 import Element exposing (Element)
 import Element.Background
 import Element.Border as Border
+import Element.Font as Font
 import Element.Input
 import History exposing (History)
 import Html.Attributes
@@ -115,6 +116,13 @@ type alias ServerGameState =
     , blackCapturedPieces : List Piece
     , whiteCapturedPieces : List Piece
     }
+
+
+type Emotion
+    = Neutral
+    | Thinking
+    | Victorious
+    | Despondent
 
 
 init : { innerWidth : Int, innerHeight : Int } -> ( Model, Cmd Msg )
@@ -281,6 +289,38 @@ update msg model =
                                                     }
                             in
                             ( updateGameModel model newModel, command )
+
+
+getEmotions : GameModel -> ( Emotion, Emotion )
+getEmotions gameModel =
+    case gameModel of
+        WaitingForInitialization ->
+            ( Neutral, Neutral )
+
+        MyTurn data ->
+            ( Thinking, Neutral )
+
+        OtherPlayersTurn data ->
+            ( Neutral, Thinking )
+
+        WaitingForMoveToBeAccepted data ->
+            ( Thinking, Neutral )
+
+        GameOver data ->
+            let
+                winner =
+                    case data.reason of
+                        Mate player ->
+                            player
+
+                        Resignation player ->
+                            player
+            in
+            if winner == data.mySide then
+                ( Victorious, Despondent )
+
+            else
+                ( Despondent, Victorious )
 
 
 getHistory : GameModel -> History MoveWithSan
@@ -492,6 +532,9 @@ view model =
 
         width =
             min model.innerWidth maxWidth
+
+        ( myEmotion, otherPlayerEmotion ) =
+            getEmotions model.gameModel
     in
     { title = "chess"
     , body =
@@ -512,7 +555,7 @@ view model =
                                     Resignation winner ->
                                         Player.toString winner ++ " wins by resignation"
                         in
-                        [ drawCommonGameItems width data selectablePieces selectableMoves
+                        [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
                         , Element.text reasonText
                         ]
 
@@ -520,18 +563,18 @@ view model =
                         [ Element.text "waiting for state from backend" ]
 
                     MyTurn data ->
-                        [ drawCommonGameItems width data selectablePieces selectableMoves
+                        [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
                         , resignButton
                         ]
 
                     WaitingForMoveToBeAccepted data ->
-                        [ drawCommonGameItems width data selectablePieces selectableMoves
+                        [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
                         , Element.text "waiting"
                         , resignButton
                         ]
 
                     OtherPlayersTurn data ->
-                        [ drawCommonGameItems width data selectablePieces selectableMoves
+                        [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
                         , Element.text "waiting for other player to move"
                         , resignButton
                         ]
@@ -541,15 +584,55 @@ view model =
     }
 
 
-drawCommonGameItems : Int -> CommonModelData a -> ( Set Square, Square -> Msg ) -> ( Set Square, Square -> Msg ) -> Element Msg
-drawCommonGameItems innerWidth data selectablePieces selectableMoves =
+drawCommonGameItems : Int -> Emotion -> Emotion -> CommonModelData a -> ( Set Square, Square -> Msg ) -> ( Set Square, Square -> Msg ) -> Element Msg
+drawCommonGameItems innerWidth myEmotion otherPlayerEmotion data selectablePieces selectableMoves =
     Element.column
         [ Element.width Element.fill ]
         [ history data.history
-        , drawCapturedPieces data.otherPlayerLostPieces
+        , drawPlayerInfo otherPlayerEmotion (Player.toString (Player.other data.mySide)) data.otherPlayerLostPieces
         , Board.drawFromFen innerWidth data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
-        , drawCapturedPieces data.myLostPieces
+        , drawPlayerInfo myEmotion (Player.toString data.mySide) data.myLostPieces
         ]
+
+
+drawPlayerInfo : Emotion -> String -> List Piece -> Element Msg
+drawPlayerInfo emotion name lostPieces =
+    Element.row
+        [ Element.spacing 10
+        , Element.width Element.fill
+        , Element.Background.color (Element.rgb255 150 150 150)
+        ]
+        [ drawEmotion emotion
+        , Element.column []
+            [ Element.el [ Font.bold ] (Element.text name)
+            , drawCapturedPieces lostPieces
+            ]
+        ]
+
+
+drawEmotion : Emotion -> Element Msg
+drawEmotion emotion =
+    let
+        face =
+            case emotion of
+                Neutral ->
+                    "☺️"
+
+                Thinking ->
+                    "\u{1F914}"
+
+                Victorious ->
+                    "😎"
+
+                Despondent ->
+                    "\u{1F92F}"
+    in
+    Element.el
+        [ Font.size 50
+        , Element.padding 5
+        , Element.Background.color (Element.rgb255 230 230 230)
+        ]
+        (Element.text face)
 
 
 resignButton : Element Msg
