@@ -41,6 +41,7 @@ type alias Model =
     { gameModel : GameModel
     , innerWidth : Int
     , innerHeight : Int
+    , joinUrl : String
     }
 
 
@@ -127,12 +128,12 @@ type Emotion
     | Despondent
 
 
-init : { innerWidth : Int, innerHeight : Int } -> ( Model, Cmd Msg )
-init { innerWidth, innerHeight } =
-    ( Model WaitingForInitialization innerWidth innerHeight, sendMessage "ready" )
+init : { innerWidth : Int, innerHeight : Int, joinUrl : String } -> ( Model, Cmd Msg )
+init { innerWidth, innerHeight, joinUrl } =
+    ( Model WaitingForInitialization innerWidth innerHeight joinUrl, sendMessage "ready" )
 
 
-main : Program { innerWidth : Int, innerHeight : Int } Model Msg
+main : Program { innerWidth : Int, innerHeight : Int, joinUrl : String } Model Msg
 main =
     Browser.document
         { init = init
@@ -580,7 +581,15 @@ view model =
                         [ Element.text "waiting for state from backend" ]
 
                     WaitingForPlayerToJoin ->
-                        [ Element.text "waiting for other player to join" ]
+                        [ Element.paragraph [] [ Element.text "Send this link to a friend to let them join your game" ]
+                        , Element.el
+                            [ Border.rounded 3
+                            , Border.color (Element.rgb255 186 189 182)
+                            , Border.width 1
+                            , Element.padding 10
+                            ]
+                            (Element.text model.joinUrl)
+                        ]
 
                     MyTurn data ->
                         [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves

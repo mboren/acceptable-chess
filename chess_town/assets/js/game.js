@@ -6,6 +6,9 @@ socket.connect()
 
 let gameId = document.querySelector("#game-id").dataset.gameId;
 let playerId = document.querySelector("#game-id").dataset.playerId;
+let joinPath = document.querySelector("#join-path").dataset.joinPath
+let joinUrl = window.location.origin + joinPath
+
 let channel = socket.channel("room:" + gameId + ":" + playerId, {})
 channel.join()
   .receive("ok", resp => { console.log("Joined successfully", resp) })
@@ -14,7 +17,7 @@ channel.join()
 
 var app = Elm.Main.init({
   node: document.getElementById('elm-main'),
-  flags: {innerWidth: window.innerWidth, innerHeight: window.innerHeight},
+  flags: {innerWidth: window.innerWidth, innerHeight: window.innerHeight, joinUrl: joinUrl},
 });
 
 channel.on("game_state", payload => {

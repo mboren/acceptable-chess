@@ -19,9 +19,10 @@ defmodule ChessTownWeb.PageController do
 
   def play_game(conn, %{"game_id" => game_id}) do
     player_id = get_session(conn, :player_id)
+    join_path = ChessTownWeb.Router.Helpers.page_path(ChessTownWeb.Endpoint, :join_game, game_id)
     case ChessApp.get_board_state(deserialize(game_id)) do
       {:ok, fen} ->
-        render(conn, "game.html", %{fen: fen, game_id: game_id, player_id: serialize(player_id)})
+        render(conn, "game.html", %{fen: fen, game_id: game_id, player_id: serialize(player_id), join_path: join_path})
       {:error, reason} ->
         conn |> redirect(to: "/chess")
     end

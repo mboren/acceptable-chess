@@ -1,4 +1,5 @@
 <div id="game-id" data-game-id="<%= @game_id %>" data-player-id="<%= @player_id %>"></div>
+<div id="join-path" data-join-path="<%= @join_path %>"></div>
 <div id="elm-main"></div>
 
 <script type="text/javascript" src="<%= Routes.static_path(@conn, "/js/game.js") %>"></script>
