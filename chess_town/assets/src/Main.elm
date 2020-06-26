@@ -46,6 +46,7 @@ type alias Model =
 
 type GameModel
     = WaitingForInitialization
+    | WaitingForPlayerToJoin
     | MyTurn
         { mySide : Player
         , myLostPieces : List Piece
@@ -115,6 +116,7 @@ type alias ServerGameState =
     , history : History MoveWithSan
     , blackCapturedPieces : List Piece
     , whiteCapturedPieces : List Piece
+    , bothPlayersConnected : Bool
     }
 
 
@@ -213,88 +215,97 @@ update msg model =
                     ( model, Cmd.none )
 
                 Ok state ->
-                    let
-                        command =
-                            if state.history /= getHistory model.gameModel then
-                                scrollRight historyId
+                    if not state.bothPlayersConnected then
+                        ( updateGameModel model WaitingForPlayerToJoin
+                        , Cmd.none
+                        )
 
-                            else
-                                Cmd.none
-                    in
-                    case state.status of
-                        Over reason ->
-                            case reason of
-                                Mate winner ->
-                                    ( updateGameModel model
-                                        (GameOver
-                                            { mySide = state.yourPlayer
-                                            , myLostPieces = getLostPieces state.yourPlayer state
-                                            , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
-                                            , board = state.board
-                                            , history = state.history
-                                            , reason = Mate winner
-                                            }
+                    else
+                        let
+                            command =
+                                if state.history /= getHistory model.gameModel then
+                                    scrollRight historyId
+
+                                else
+                                    Cmd.none
+                        in
+                        case state.status of
+                            Over reason ->
+                                case reason of
+                                    Mate winner ->
+                                        ( updateGameModel model
+                                            (GameOver
+                                                { mySide = state.yourPlayer
+                                                , myLostPieces = getLostPieces state.yourPlayer state
+                                                , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
+                                                , board = state.board
+                                                , history = state.history
+                                                , reason = Mate winner
+                                                }
+                                            )
+                                        , command
                                         )
-                                    , command
-                                    )
 
-                                Resignation winner ->
-                                    ( updateGameModel model
-                                        (GameOver
-                                            { mySide = state.yourPlayer
-                                            , myLostPieces = getLostPieces state.yourPlayer state
-                                            , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
-                                            , board = state.board
-                                            , history = state.history
-                                            , reason = Resignation winner
-                                            }
+                                    Resignation winner ->
+                                        ( updateGameModel model
+                                            (GameOver
+                                                { mySide = state.yourPlayer
+                                                , myLostPieces = getLostPieces state.yourPlayer state
+                                                , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
+                                                , board = state.board
+                                                , history = state.history
+                                                , reason = Resignation winner
+                                                }
+                                            )
+                                        , command
                                         )
-                                    , command
-                                    )
 
-                        Continue ->
-                            let
-                                selection =
-                                    case model.gameModel of
-                                        MyTurn data ->
-                                            data.selection
+                            Continue ->
+                                let
+                                    selection =
+                                        case model.gameModel of
+                                            MyTurn data ->
+                                                data.selection
 
-                                        _ ->
-                                            SelectingStart
+                                            _ ->
+                                                SelectingStart
 
-                                newModel =
-                                    case model.gameModel of
-                                        GameOver _ ->
-                                            model.gameModel |> Debug.log "got continue after game over"
+                                    newModel =
+                                        case model.gameModel of
+                                            GameOver _ ->
+                                                model.gameModel |> Debug.log "got continue after game over"
 
-                                        _ ->
-                                            if state.yourPlayer == state.playerToMove then
-                                                MyTurn
-                                                    { mySide = state.yourPlayer
-                                                    , myLostPieces = getLostPieces state.yourPlayer state
-                                                    , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
-                                                    , legalMoves = state.legalMoves
-                                                    , board = state.board
-                                                    , history = state.history
-                                                    , selection = selection
-                                                    }
+                                            _ ->
+                                                if state.yourPlayer == state.playerToMove then
+                                                    MyTurn
+                                                        { mySide = state.yourPlayer
+                                                        , myLostPieces = getLostPieces state.yourPlayer state
+                                                        , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
+                                                        , legalMoves = state.legalMoves
+                                                        , board = state.board
+                                                        , history = state.history
+                                                        , selection = selection
+                                                        }
 
-                                            else
-                                                OtherPlayersTurn
-                                                    { mySide = state.yourPlayer
-                                                    , myLostPieces = getLostPieces state.yourPlayer state
-                                                    , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
-                                                    , board = state.board
-                                                    , history = state.history
-                                                    }
-                            in
-                            ( updateGameModel model newModel, command )
+                                                else
+                                                    OtherPlayersTurn
+                                                        { mySide = state.yourPlayer
+                                                        , myLostPieces = getLostPieces state.yourPlayer state
+                                                        , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
+                                                        , board = state.board
+                                                        , history = state.history
+                                                        }
+                                in
+                                ( updateGameModel model newModel, command )
 
 
 getEmotions : GameModel -> ( Emotion, Emotion )
 getEmotions gameModel =
     case gameModel of
         WaitingForInitialization ->
+            ( Neutral, Neutral )
+
+        WaitingForPlayerToJoin ->
             ( Neutral, Neutral )
 
         MyTurn data ->
@@ -327,6 +338,9 @@ getHistory : GameModel -> History MoveWithSan
 getHistory model =
     case model of
         WaitingForInitialization ->
+            History.empty
+
+        WaitingForPlayerToJoin ->
             History.empty
 
         MyTurn data ->
@@ -389,6 +403,7 @@ boardStateDecoder =
         |> required "winner" (Json.Decode.nullable Player.decode)
         |> required "black_captured_pieces" (Json.Decode.list pieceDecoder)
         |> required "white_captured_pieces" (Json.Decode.list pieceDecoder)
+        |> required "both_players_connected" Json.Decode.bool
         |> Json.Decode.andThen validateDecodedState
 
 
@@ -402,6 +417,7 @@ type alias RawServerGameState =
     , winner : Maybe Player
     , blackCapturedPieces : List Piece
     , whiteCapturedPieces : List Piece
+    , bothPlayersConnected : Bool
     }
 
 
@@ -461,6 +477,7 @@ validateDecodedState state =
                 , history = state.history
                 , blackCapturedPieces = state.blackCapturedPieces
                 , whiteCapturedPieces = state.whiteCapturedPieces
+                , bothPlayersConnected = state.bothPlayersConnected
                 }
 
         Err message ->
@@ -561,6 +578,9 @@ view model =
 
                     WaitingForInitialization ->
                         [ Element.text "waiting for state from backend" ]
+
+                    WaitingForPlayerToJoin ->
+                        [ Element.text "waiting for other player to join" ]
 
                     MyTurn data ->
                         [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves

@@ -132,7 +132,16 @@ defmodule ChessApp.Game do
       history: history,
       black_captured_pieces: state.black_captured_pieces,
       white_captured_pieces: state.white_captured_pieces,
+      both_players_connected: have_both_players_connected?(state),
     }
+  end
+
+  defp have_both_players_connected?(%ChessApp.Game{white_player: white, black_player: black}) do
+    case {white, black} do
+      {nil, _} -> false
+      {_, nil} -> false
+      {_, _} -> true
+    end
   end
 
   defp get_game_status(%ChessApp.Game{game_server: pid, player_resigned: nil}) do
