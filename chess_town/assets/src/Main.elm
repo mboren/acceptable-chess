@@ -18,6 +18,7 @@ import Player exposing (Player)
 import Set exposing (Set)
 import Square exposing (Square)
 import Task
+import Time
 
 
 port sendMessage : String -> Cmd msg
@@ -47,7 +48,7 @@ type alias Model =
 
 type GameModel
     = WaitingForInitialization
-    | WaitingForPlayerToJoin
+    | WaitingForPlayerToJoin Time.Posix
     | MyTurn
         { mySide : Player
         , myLostPieces : List Piece
@@ -150,6 +151,7 @@ type Msg
     | Resign
     | WindowResized Int Int
     | NoOp
+    | AnimationFrame Time.Posix
 
 
 updateGameModel : Model -> GameModel -> Model
@@ -162,6 +164,14 @@ update msg model =
     case msg of
         NoOp ->
             ( model, Cmd.none )
+
+        AnimationFrame time ->
+            case model.gameModel of
+                WaitingForPlayerToJoin _ ->
+                    ( updateGameModel model (WaitingForPlayerToJoin time), Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         WindowResized width height ->
             ( { model | innerWidth = width, innerHeight = height }, Cmd.none )
@@ -217,7 +227,7 @@ update msg model =
 
                 Ok state ->
                     if not state.bothPlayersConnected then
-                        ( updateGameModel model WaitingForPlayerToJoin
+                        ( updateGameModel model (WaitingForPlayerToJoin (Time.millisToPosix 0))
                         , Cmd.none
                         )
 
@@ -306,7 +316,7 @@ getEmotions gameModel =
         WaitingForInitialization ->
             ( Neutral, Neutral )
 
-        WaitingForPlayerToJoin ->
+        WaitingForPlayerToJoin _ ->
             ( Neutral, Neutral )
 
         MyTurn data ->
@@ -341,7 +351,7 @@ getHistory model =
         WaitingForInitialization ->
             History.empty
 
-        WaitingForPlayerToJoin ->
+        WaitingForPlayerToJoin _ ->
             History.empty
 
         MyTurn data ->
@@ -503,9 +513,17 @@ moveWithSanDecoder =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ messageReceiver GetState
-        , Browser.Events.onResize WindowResized
-        ]
+        ([ messageReceiver GetState
+         , Browser.Events.onResize WindowResized
+         ]
+            ++ (case model.gameModel of
+                    WaitingForPlayerToJoin _ ->
+                        [ Browser.Events.onAnimationFrame AnimationFrame ]
+
+                    _ ->
+                        []
+               )
+        )
 
 
 getSelectablePieces : List Move -> Set Square
@@ -580,8 +598,8 @@ view model =
                     WaitingForInitialization ->
                         [ Element.text "waiting for state from backend" ]
 
-                    WaitingForPlayerToJoin ->
-                        [ Element.paragraph [] [ Element.text "Send this link to a friend to let them join your game" ]
+                    WaitingForPlayerToJoin time ->
+                        [ Element.paragraph [] [ Element.text "Send this link to a friend to let them join your game:" ]
                         , Element.el
                             [ Border.rounded 3
                             , Border.color (Element.rgb255 186 189 182)
@@ -589,6 +607,8 @@ view model =
                             , Element.padding 10
                             ]
                             (Element.text model.joinUrl)
+                        , Element.el [ Element.padding 10 ] (Element.text "Waiting for other player to join....")
+                        , spinner time
                         ]
 
                     MyTurn data ->
@@ -703,3 +723,20 @@ history hist =
             , Element.htmlAttribute (Html.Attributes.id historyId)
             , Element.Background.color (Element.rgb255 190 190 190)
             ]
+
+
+spinner : Time.Posix -> Element Msg
+spinner time =
+    let
+        rotationsPerSecond =
+            1.0
+
+        radiansPerMilli =
+            rotationsPerSecond * (2.0 * pi / 1000.0)
+
+        radians =
+            (Time.posixToMillis time |> toFloat) * radiansPerMilli
+    in
+    Element.image
+        [ Element.width (Element.px 50), Element.rotate radians ]
+        { src = Board.pieceToFileName (Piece Piece.Pawn Player.Black), description = "loading spinner" }
