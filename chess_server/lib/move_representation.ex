@@ -47,9 +47,9 @@ defmodule MoveRepresentation do
 
     promo_string = promotion_to_string(promotion)
     if destination_piece == " " do
-      "#{end_square}#{promotion}"
+      "#{end_square}#{promo_string}"
     else
-      "#{Atom.to_string(start_file)}x#{end_square}#{promotion}"
+      "#{Atom.to_string(start_file)}x#{end_square}#{promo_string}"
     end
   end
 
