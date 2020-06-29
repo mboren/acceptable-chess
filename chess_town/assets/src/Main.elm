@@ -155,6 +155,7 @@ type Msg
     | NoOp
     | AnimationFrame Time.Posix
     | CancelPromotion
+    | RestartGame
 
 
 updateGameModel : Model -> GameModel -> Model
@@ -277,6 +278,9 @@ update msg model =
         Resign ->
             ( model, sendMessage "resign" )
 
+        RestartGame ->
+            ( model, sendMessage "restart" )
+
         GetState value ->
             case Json.Decode.decodeValue boardStateDecoder value of
                 Err err ->
@@ -343,30 +347,25 @@ update msg model =
                                                 SelectingStart
 
                                     newModel =
-                                        case model.gameModel of
-                                            GameOver _ ->
-                                                model.gameModel |> Debug.log "got continue after game over"
+                                        if state.yourPlayer == state.playerToMove then
+                                            MyTurn
+                                                { mySide = state.yourPlayer
+                                                , myLostPieces = getLostPieces state.yourPlayer state
+                                                , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
+                                                , legalMoves = state.legalMoves
+                                                , board = state.board
+                                                , history = state.history
+                                                , selection = selection
+                                                }
 
-                                            _ ->
-                                                if state.yourPlayer == state.playerToMove then
-                                                    MyTurn
-                                                        { mySide = state.yourPlayer
-                                                        , myLostPieces = getLostPieces state.yourPlayer state
-                                                        , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
-                                                        , legalMoves = state.legalMoves
-                                                        , board = state.board
-                                                        , history = state.history
-                                                        , selection = selection
-                                                        }
-
-                                                else
-                                                    OtherPlayersTurn
-                                                        { mySide = state.yourPlayer
-                                                        , myLostPieces = getLostPieces state.yourPlayer state
-                                                        , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
-                                                        , board = state.board
-                                                        , history = state.history
-                                                        }
+                                        else
+                                            OtherPlayersTurn
+                                                { mySide = state.yourPlayer
+                                                , myLostPieces = getLostPieces state.yourPlayer state
+                                                , otherPlayerLostPieces = getLostPieces (Player.other state.yourPlayer) state
+                                                , board = state.board
+                                                , history = state.history
+                                                }
                                 in
                                 ( updateGameModel model newModel, command )
 
@@ -695,6 +694,7 @@ view model =
                         in
                         [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
                         , Element.text reasonText
+                        , restartGameButton
                         ]
 
                     WaitingForInitialization ->
@@ -806,6 +806,16 @@ resignButton =
         , Border.rounded 10
         ]
         { onPress = Just Resign, label = Element.text "Offer resignation" }
+
+
+restartGameButton : Element Msg
+restartGameButton =
+    Element.Input.button
+        [ Element.Background.color (Element.rgb255 200 200 200)
+        , Element.padding 5
+        , Border.rounded 10
+        ]
+        { onPress = Just RestartGame, label = Element.text "Rematch" }
 
 
 drawCapturedPieces : List Piece -> Element Msg

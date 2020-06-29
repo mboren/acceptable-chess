@@ -20,6 +20,15 @@ defmodule ChessApp.Game do
     %ChessApp.Game{game_server: pid, history: []}
   end
 
+  def restart_game(state = %ChessApp.Game{game_server: pid}) do
+    :binbo.new_game(pid)
+    state
+      |> Map.put(:history, [])
+      |> Map.put(:player_resigned, nil)
+      |> Map.put(:black_captured_pieces, [])
+      |> Map.put(:white_captured_pieces, [])
+  end
+
   def resign(player_id, state = %ChessApp.Game{game_server: pid, player_resigned: nil, white_player: player_id}) do
     Map.put(state, :player_resigned, :white)
   end

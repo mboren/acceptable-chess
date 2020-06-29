@@ -35,6 +35,12 @@ defmodule ChessApp do
     end
   end
 
+  def restart_game(game_id) do
+    with {:ok, pid} <- get_game_pid(game_id) do
+      ChessApp.Game.Interface.restart_game(pid)
+    end
+  end
+
   def resign(game_id, player_id) do
     [{pid, _}] = Registry.lookup(ChessApp.Registry, game_id)
     ChessApp.Game.Interface.resign(pid, player_id)

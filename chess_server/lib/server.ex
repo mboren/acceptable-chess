@@ -13,6 +13,12 @@ defmodule ChessApp.Game.Server do
   end
 
   @impl true
+  def handle_call({:restart_game}, _from, state) do
+    new_state = ChessApp.Game.restart_game(state)
+    {:reply, :ok, new_state}
+  end
+
+  @impl true
   def handle_call({:get_players}, _from, state) do
     {:reply, state, state}
   end
