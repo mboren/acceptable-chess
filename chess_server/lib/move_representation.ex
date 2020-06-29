@@ -5,27 +5,7 @@ defmodule MoveRepresentation do
   @type piece :: String.t
   @type promo_to :: :q | :r | :b | :n
 
-  @spec get_san(String.t(), [move], move) :: String.t()
-  def get_san(fen, _legal_moves, %{start: start_square, end: end_square, promotion: promotion}) do
-    piece_list = Position.fen_to_piece_list(fen)
-    {:ok, destination_piece} = Position.get_piece_at_square(end_square, piece_list)
-
-    {:ok, %{rank: _, file: start_file}} = Square.get_rank_and_file(start_square)
-
-    promo_string = promotion_to_string(promotion)
-    if destination_piece == " " do
-      "#{end_square}#{promo_string}"
-    else
-      "#{Atom.to_string(start_file)}x#{end_square}#{promo_string}"
-    end
-  end
-
-  @spec promotion_to_string(promo_to) :: String.t
-  def promotion_to_string(promo) do
-    "=" <> String.upcase(Atom.to_string(promo))
-  end
-
-  def get_san(fen, legal_moves, move = %{start: start_square, end: end_square}) do
+  def get_san(fen, legal_moves, move = %{start: start_square, end: end_square, promotion: nil}) do
     piece_list = Position.fen_to_piece_list(fen)
     {:ok, piece} = Position.get_piece_at_square(start_square, piece_list)
     {:ok, destination_piece} = Position.get_piece_at_square(end_square, piece_list)
@@ -57,6 +37,27 @@ defmodule MoveRepresentation do
         end
     end
   end
+
+  @spec get_san(String.t(), [move], move) :: String.t()
+  def get_san(fen, _legal_moves, %{start: start_square, end: end_square, promotion: promotion}) do
+    piece_list = Position.fen_to_piece_list(fen)
+    {:ok, destination_piece} = Position.get_piece_at_square(end_square, piece_list)
+
+    {:ok, %{rank: _, file: start_file}} = Square.get_rank_and_file(start_square)
+
+    promo_string = promotion_to_string(promotion)
+    if destination_piece == " " do
+      "#{end_square}#{promotion}"
+    else
+      "#{Atom.to_string(start_file)}x#{end_square}#{promotion}"
+    end
+  end
+
+  @spec promotion_to_string(promo_to) :: String.t
+  def promotion_to_string(promo) do
+    "=" <> String.upcase(promo)
+  end
+
 
   @spec get_moves_that_end_at(square, [move]) :: [move]
   def get_moves_that_end_at(square, moves) do

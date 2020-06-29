@@ -189,7 +189,7 @@ defmodule ChessApp.Game do
   end
 
   @spec move_map_to_string(move) :: String.t
-  defp move_map_to_string(%{"start" => s, "end" => e}) do
+  defp move_map_to_string(%{"start" => s, "end" => e, "promotion" => nil}) do
     s <> e
   end
 

@@ -16,9 +16,36 @@ type alias Board =
 
 drawFromFen : Int -> String -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Element msg -> Element msg
 drawFromFen screenWidth fen selectablePieces selectableMoves bottomPlayer errorElement =
+    let
+        squareDrawFunc =
+            drawSquare selectablePieces selectableMoves
+    in
     fen
         |> fenToBoard
-        |> Maybe.map (\board -> draw screenWidth board selectablePieces selectableMoves bottomPlayer)
+        |> Maybe.map (\board -> draw screenWidth board bottomPlayer squareDrawFunc [])
+        |> Maybe.withDefault errorElement
+
+
+drawFromFenWithPromotions : Int -> String -> Player -> List Piece -> (Piece -> msg) -> msg -> Element msg -> Element msg
+drawFromFenWithPromotions screenWidth fen bottomPlayer promotions promotionMsg cancelMsg errorElement =
+    let
+        cancelOverlay =
+            Element.inFront
+                (Element.el
+                    [ Element.width Element.fill
+                    , Element.height Element.fill
+                    , Background.color (Element.rgba255 128 128 128 0.5)
+                    , Element.Events.onClick cancelMsg
+                    ]
+                    Element.none
+                )
+
+        promotionOverlay =
+            Element.inFront (drawPromotions promotions promotionMsg)
+    in
+    fen
+        |> fenToBoard
+        |> Maybe.map (\board -> draw screenWidth board bottomPlayer (drawSquareWithAttributes []) [ cancelOverlay, promotionOverlay ])
         |> Maybe.withDefault errorElement
 
 
@@ -61,8 +88,8 @@ replaceNumbers processed unprocessed =
                 replaceNumbers (processed ++ String.fromChar head) tail
 
 
-draw : Int -> Board -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Element msg
-draw screenWidth board ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) currentPlayer =
+draw : Int -> Board -> Player -> (Maybe Piece -> Square -> Element msg) -> List (Element.Attribute msg) -> Element msg
+draw screenWidth board currentPlayer drawSquareFunc extraAttributes =
     let
         files =
             [ "a", "b", "c", "d", "e", "f", "g", "h" ]
@@ -82,12 +109,14 @@ draw screenWidth board ( selectablePieceSquares, selectPieceEvent ) ( selectable
                 [ Element.width Element.fill
                 , Element.height Element.fill
                 ]
-                (List.map2 (drawSquare ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent )) row rowCoords)
+                (List.map2 drawSquareFunc row rowCoords)
     in
     Element.column
-        [ Element.width (Element.px screenWidth)
-        , Element.height (Element.px screenWidth)
-        ]
+        ([ Element.width (Element.px screenWidth)
+         , Element.height (Element.px screenWidth)
+         ]
+            ++ extraAttributes
+        )
         (List.map2 drawRow (orientBoard currentPlayer board) (orientBoard currentPlayer coordinates))
 
 
@@ -103,8 +132,31 @@ possibleMoveOverlay =
         Element.none
 
 
-drawSquare : ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Maybe Piece -> Square -> Element msg
-drawSquare ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) maybePiece square =
+drawPromotions : List Piece -> (Piece -> msg) -> Element msg
+drawPromotions pieces event =
+    let
+        promotions =
+            pieces
+                |> List.map
+                    (\piece ->
+                        Element.el
+                            [ Element.width Element.fill
+                            , Element.height Element.fill
+                            , Element.Events.onClick (event piece)
+                            ]
+                            (drawPiece (Just piece))
+                    )
+    in
+    Element.row
+        [ Element.width (Element.px 400)
+        , Element.centerX
+        , Element.centerY
+        , Background.color (Element.rgb255 90 90 90)
+        ]
+        promotions
+
+
+drawSquareWithAttributes attributes maybePiece square =
     let
         color =
             if Square.isLight square then
@@ -112,7 +164,21 @@ drawSquare ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares,
 
             else
                 Element.rgb255 0 150 53
+    in
+    Element.el
+        ([ Background.color color
+         , Element.padding 0
+         , Element.width Element.fill
+         , Element.height Element.fill
+         ]
+            ++ attributes
+        )
+        (drawPiece maybePiece)
 
+
+drawSquare : ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Maybe Piece -> Square -> Element msg
+drawSquare ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) maybePiece square =
+    let
         event =
             if Set.member square selectablePieceSquares then
                 [ Element.Events.onClick (selectPieceEvent square) ]
@@ -130,16 +196,7 @@ drawSquare ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares,
             else
                 Element.none
     in
-    Element.el
-        ([ Background.color color
-         , Element.padding 0
-         , Element.width Element.fill
-         , Element.height Element.fill
-         , Element.inFront overlay
-         ]
-            ++ event
-        )
-        (drawPiece maybePiece)
+    drawSquareWithAttributes (Element.inFront overlay :: event) maybePiece square
 
 
 orientBoard : Player -> List (List a) -> List (List a)

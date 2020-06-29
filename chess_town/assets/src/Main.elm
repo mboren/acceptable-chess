@@ -12,7 +12,7 @@ import Element.Input
 import History exposing (History)
 import Html.Attributes
 import Json.Decode exposing (Decoder, field, string)
-import Move exposing (Move, MoveWithSan)
+import Move exposing (Move, MoveWithSan, MoveWithStringPromotion)
 import Piece exposing (Piece)
 import Player exposing (Player)
 import Set exposing (Set)
@@ -24,7 +24,7 @@ import Time
 port sendMessage : String -> Cmd msg
 
 
-port sendMove : Move -> Cmd msg
+port sendMove : MoveWithStringPromotion -> Cmd msg
 
 
 port messageReceiver : (Json.Decode.Value -> msg) -> Sub msg
@@ -102,6 +102,7 @@ type GameOverReason
 type Selection
     = SelectingStart
     | SelectingEnd Square
+    | SelectingPromotion Square Square (List Piece)
 
 
 type ServerGameStatus
@@ -148,10 +149,12 @@ type Msg
     = GetState Json.Decode.Value
     | NewSelectedMoveStart Square
     | NewSelectedMoveEnd Square
+    | PromotionSelected Piece
     | Resign
     | WindowResized Int Int
     | NoOp
     | AnimationFrame Time.Posix
+    | CancelPromotion
 
 
 updateGameModel : Model -> GameModel -> Model
@@ -164,6 +167,23 @@ update msg model =
     case msg of
         NoOp ->
             ( model, Cmd.none )
+
+        CancelPromotion ->
+            case model.gameModel of
+                MyTurn data ->
+                    case data.selection of
+                        SelectingPromotion start _ _ ->
+                            let
+                                newData =
+                                    { data | selection = SelectingEnd start }
+                            in
+                            ( updateGameModel model (MyTurn newData), Cmd.none )
+
+                        _ ->
+                            ( model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         AnimationFrame time ->
             case model.gameModel of
@@ -189,9 +209,50 @@ update msg model =
                 MyTurn data ->
                     case data.selection of
                         SelectingEnd start ->
+                            case Move.getPossiblePromotions data.legalMoves start end of
+                                [] ->
+                                    let
+                                        move =
+                                            Move start end Nothing
+                                    in
+                                    ( updateGameModel model
+                                        (WaitingForMoveToBeAccepted
+                                            { mySide = data.mySide
+                                            , myLostPieces = data.myLostPieces
+                                            , otherPlayerLostPieces = data.otherPlayerLostPieces
+                                            , legalMoves = data.legalMoves
+                                            , board = data.board
+                                            , history = data.history
+                                            , moveSent = move
+                                            }
+                                        )
+                                    , sendMove { start = move.start, end = move.end, promotion = Nothing }
+                                    )
+
+                                promotions ->
+                                    let
+                                        promotionPieces =
+                                            List.map (\kind -> Piece kind data.mySide) promotions
+                                    in
+                                    ( updateGameModel model
+                                        (MyTurn { data | selection = SelectingPromotion start end promotionPieces })
+                                    , Cmd.none
+                                    )
+
+                        _ ->
+                            ( model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        PromotionSelected piece ->
+            case model.gameModel of
+                MyTurn data ->
+                    case data.selection of
+                        SelectingPromotion start end _ ->
                             let
                                 move =
-                                    Move start end
+                                    Move start end (Just piece.kind)
                             in
                             ( updateGameModel model
                                 (WaitingForMoveToBeAccepted
@@ -204,7 +265,7 @@ update msg model =
                                     , moveSent = move
                                     }
                                 )
-                            , sendMove move
+                            , sendMove { start = move.start, end = move.end, promotion = Just <| Piece.pieceKindToString piece.kind }
                             )
 
                         _ ->
@@ -432,6 +493,40 @@ type alias RawServerGameState =
     }
 
 
+promotionDecoder : Decoder Piece.PieceKind
+promotionDecoder =
+    Json.Decode.string
+        |> Json.Decode.andThen
+            (\s ->
+                case String.toList s of
+                    [ c ] ->
+                        let
+                            pieceKind =
+                                case c of
+                                    'q' ->
+                                        Just Piece.Queen
+
+                                    'n' ->
+                                        Just Piece.Knight
+
+                                    'b' ->
+                                        Just Piece.Bishop
+
+                                    'r' ->
+                                        Just Piece.Rook
+
+                                    _ ->
+                                        Nothing
+                        in
+                        pieceKind
+                            |> Maybe.map Json.Decode.succeed
+                            |> Maybe.withDefault (Json.Decode.fail ("Unable to decode promotion from string " ++ s))
+
+                    _ ->
+                        Json.Decode.fail ("I was trying to decode a promotion when I found a string with length > 1: " ++ s)
+            )
+
+
 pieceDecoder : Decoder Piece
 pieceDecoder =
     Json.Decode.string
@@ -495,18 +590,20 @@ validateDecodedState state =
             Json.Decode.fail message
 
 
-moveDecoder : Decoder { start : String, end : String }
+moveDecoder : Decoder { start : String, end : String, promotion : Maybe Piece.PieceKind }
 moveDecoder =
-    Json.Decode.map2 (\start end -> { start = start, end = end })
+    Json.Decode.map3 (\start end promotion -> { start = start, end = end, promotion = promotion })
         (field "start" string)
         (field "end" string)
+        (Json.Decode.maybe (field "promotion" promotionDecoder))
 
 
 moveWithSanDecoder : Decoder MoveWithSan
 moveWithSanDecoder =
-    Json.Decode.map3 MoveWithSan
+    Json.Decode.map4 MoveWithSan
         (field "start" string)
         (field "end" string)
+        (Json.Decode.maybe (field "promotion" promotionDecoder))
         (field "san" string)
 
 
@@ -552,6 +649,11 @@ getClickableSquares model =
                 SelectingEnd start ->
                     ( ( getSelectablePieces data.legalMoves, NewSelectedMoveStart )
                     , ( getPossibleMoveEndsFromSquare start data.legalMoves, NewSelectedMoveEnd )
+                    )
+
+                SelectingPromotion _ _ _ ->
+                    ( ( Set.empty, NewSelectedMoveStart )
+                    , ( Set.empty, NewSelectedMoveEnd )
                     )
 
         _ ->
@@ -612,9 +714,21 @@ view model =
                         ]
 
                     MyTurn data ->
-                        [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
-                        , resignButton
-                        ]
+                        case data.selection of
+                            SelectingPromotion _ _ possiblePromotions ->
+                                [ Element.column
+                                    [ Element.width Element.fill ]
+                                    [ history data.history
+                                    , drawPlayerInfo otherPlayerEmotion (Player.toString (Player.other data.mySide)) data.otherPlayerLostPieces
+                                    , Board.drawFromFenWithPromotions width data.board data.mySide possiblePromotions PromotionSelected CancelPromotion (Element.text ("Error parsing FEN: " ++ data.board))
+                                    , drawPlayerInfo myEmotion (Player.toString data.mySide) data.myLostPieces
+                                    ]
+                                ]
+
+                            _ ->
+                                [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
+                                , resignButton
+                                ]
 
                     WaitingForMoveToBeAccepted data ->
                         [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
