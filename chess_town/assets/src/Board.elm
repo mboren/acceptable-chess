@@ -41,7 +41,7 @@ drawFromFenWithPromotions screenWidth fen bottomPlayer promotions promotionMsg c
                 )
 
         promotionOverlay =
-            Element.inFront (drawPromotions promotions promotionMsg)
+            Element.inFront (drawPromotions screenWidth promotions promotionMsg)
     in
     fen
         |> fenToBoard
@@ -132,8 +132,8 @@ possibleMoveOverlay =
         Element.none
 
 
-drawPromotions : List Piece -> (Piece -> msg) -> Element msg
-drawPromotions pieces event =
+drawPromotions : Int -> List Piece -> (Piece -> msg) -> Element msg
+drawPromotions screenWidth pieces event =
     let
         promotions =
             pieces
@@ -146,9 +146,10 @@ drawPromotions pieces event =
                             ]
                             (drawPiece (Just piece))
                     )
+        width = (screenWidth // 8) * (List.length pieces)
     in
     Element.row
-        [ Element.width (Element.px 400)
+        [ Element.width (Element.px width)
         , Element.centerX
         , Element.centerY
         , Background.color (Element.rgb255 90 90 90)
