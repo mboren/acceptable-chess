@@ -1,4 +1,5 @@
 defmodule PositionTest do
+    @moduledoc false
     use ExUnit.Case
 
     test "start position FEN to piece list" do

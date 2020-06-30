@@ -1,4 +1,5 @@
 defmodule MoveRepresentationTest do
+  @moduledoc false
   use ExUnit.Case
 
   alias MoveRepresentation, as: MR

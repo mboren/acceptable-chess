@@ -1,4 +1,7 @@
 defmodule ChessApp.Game.Server do
+  @moduledoc """
+  This module contains a GenServer wrapper for the logic in ChessApp.Game
+  """
   use GenServer
 
   @impl true

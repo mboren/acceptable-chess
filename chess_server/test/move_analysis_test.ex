@@ -1,4 +1,5 @@
 defmodule MoveAnalysisTest do
+  @moduledoc false
   use ExUnit.Case
   alias MoveAnalysis, as: MA
 

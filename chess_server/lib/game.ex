@@ -1,4 +1,11 @@
 defmodule ChessApp.Game do
+  @moduledoc """
+  This module is responsible for managing the state for a single chess game.
+  Most of the board state is kept by a binbo process that we store a reference to in game_server.
+  However, binbo doesn't provide functions to get past moves that were made, or pieces that were
+  captured, so we store those in this module.
+  This module also keeps track of connected players
+  """
   defstruct(
     game_server: nil,
     white_player: nil,

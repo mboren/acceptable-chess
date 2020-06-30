@@ -1,4 +1,8 @@
 defmodule MoveRepresentation do
+  @moduledoc """
+  This module is used to convert moves to the Standard Algebraic Notation (SAN) format for display to the user
+  https://en.wikipedia.org/wiki/Algebraic_notation_(chess)
+  """
   alias MoveAnalysis, as: MA
   @type square :: String.t
   @type move :: %{start: String.t, end: String.t} | %{start: String.t, end: String.t, promotion: String.t | nil}
