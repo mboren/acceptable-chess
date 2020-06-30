@@ -71,8 +71,14 @@ defmodule ChessApp.Game do
     player_color = get_player_color(player_id, state)
     {:ok, fen} = get_board_state(state)
     if color_to_move == player_color do
-      add_move_to_history(:binbo.move(pid, move_map_to_string(move)), move_from_map(move), fen, state)
-      |> add_captured_piece(player_color, move, fen)
+      move_result = :binbo.move(pid, move_map_to_string(move))
+      case move_result do
+        {:ok, _status} ->
+          add_move_to_history(move_from_map(move), fen, state)
+            |> add_captured_piece(player_color, move, fen)
+        {:error, _err} ->
+          state
+      end
     else
       state
     end
@@ -93,7 +99,7 @@ defmodule ChessApp.Game do
     end
   end
 
-  defp add_move_to_history({:ok, _}, move, fen, state = %ChessApp.Game{game_server: pid}) do
+  defp add_move_to_history(move, fen, state = %ChessApp.Game{game_server: pid}) do
     {:ok, legal_moves} =  :binbo.all_legal_moves(pid, :bin)
     legal_moves = Enum.map(legal_moves, &move_from_map/1)
     san = MoveRepresentation.get_san(fen, legal_moves, move)
@@ -116,9 +122,6 @@ defmodule ChessApp.Game do
     end
   end
 
-  defp add_move_to_history({:error, _}, _move, state) do
-    state
-  end
 
   @spec get_board_state(%ChessApp.Game{}) :: :binbo_server.get_fen_ret()
   def get_board_state(%ChessApp.Game{game_server: pid}) do
