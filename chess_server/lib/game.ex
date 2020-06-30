@@ -29,22 +29,22 @@ defmodule ChessApp.Game do
       |> Map.put(:white_captured_pieces, [])
   end
 
-  def resign(player_id, state = %ChessApp.Game{game_server: pid, player_resigned: nil, white_player: player_id}) do
+  def resign(player_id, state = %ChessApp.Game{player_resigned: nil, white_player: player_id}) do
     Map.put(state, :player_resigned, :white)
   end
 
-  def resign(player_id, state = %ChessApp.Game{game_server: pid, player_resigned: nil, black_player: player_id}) do
+  def resign(player_id, state = %ChessApp.Game{player_resigned: nil, black_player: player_id}) do
     Map.put(state, :player_resigned, :black)
   end
 
-  def add_player_to_game(player_id, state = %ChessApp.Game{game_server: _pid, white_player: nil, black_player: _player}) do
+  def add_player_to_game(player_id, state = %ChessApp.Game{white_player: nil, black_player: _player}) do
     Map.put(state, :white_player, player_id)
   end
 
-  def add_player_to_game(player_id, state = %ChessApp.Game{game_server: _pid, white_player: _player, black_player: nil}) do
+  def add_player_to_game(player_id, state = %ChessApp.Game{white_player: _player, black_player: nil}) do
     Map.put(state, :black_player, player_id)
   end
-  def add_player_to_game(_player_id, state = %ChessApp.Game{game_server: _pid, white_player: _player, black_player: _player2}) do
+  def add_player_to_game(_player_id, state = %ChessApp.Game{white_player: _player, black_player: _player2}) do
     # if both players have already been set, don't do anything
     state
   end
@@ -78,7 +78,7 @@ defmodule ChessApp.Game do
     end
   end
 
-  def make_move(player_id, move, state = %ChessApp.Game{game_server: pid, player_resigned: player}) do
+  def make_move(_player_id, _move, state = %ChessApp.Game{game_server: _pid, player_resigned: _player}) do
     state
   end
 
@@ -157,7 +157,7 @@ defmodule ChessApp.Game do
     :binbo.game_status(pid)
   end
 
-  defp get_game_status(%ChessApp.Game{game_server: pid, player_resigned: player}) do
+  defp get_game_status(%ChessApp.Game{player_resigned: _player}) do
     {:ok, :resignation}
   end
 
@@ -165,11 +165,11 @@ defmodule ChessApp.Game do
     nil
   end
 
-  defp get_winner(:checkmate, player_to_move = :white, %ChessApp.Game{player_resigned: nil}) do
+  defp get_winner(:checkmate, _player_to_move = :white, %ChessApp.Game{player_resigned: nil}) do
     :black
   end
 
-  defp get_winner(:checkmate, player_to_move = :black, %ChessApp.Game{player_resigned: nil}) do
+  defp get_winner(:checkmate, _player_to_move = :black, %ChessApp.Game{player_resigned: nil}) do
     :white
   end
 

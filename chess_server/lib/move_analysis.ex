@@ -90,7 +90,7 @@ defmodule MoveAnalysis do
   def is_straight_pawn_move("P", start_file, end_file) when start_file == end_file do
     true
   end
-  def is_straight_pawn_move(piece, start_file, end_file) do
+  def is_straight_pawn_move(_piece, _start_file, _end_file) do
     false
   end
 

@@ -10,7 +10,7 @@ defmodule MoveRepresentation do
     {:ok, piece} = Position.get_piece_at_square(start_square, piece_list)
     {:ok, destination_piece} = Position.get_piece_at_square(end_square, piece_list)
 
-    {:ok, %{rank: start_rank, file: start_file}} = Square.get_rank_and_file(start_square)
+    {:ok, %{rank: _start_rank, file: start_file}} = Square.get_rank_and_file(start_square)
     {:ok, %{rank: end_rank, file: end_file}} = Square.get_rank_and_file(end_square)
 
     # if a pawn ends up at the end of the board, but we no promotion is stated,
@@ -66,7 +66,7 @@ defmodule MoveRepresentation do
   end
 
   @spec get_move_context(piece, move, [move], Position.piece_list) :: [{:ok, map}]
-  def get_move_context(piece, move = %{start: start_square, end: end_square}, legal_moves, piece_list) do
+  def get_move_context(piece, move = %{start: _start_square, end: end_square}, legal_moves, piece_list) do
     moves = get_moves_that_end_at(end_square, legal_moves)
             |> MapSet.new()
             |> MapSet.delete(move)
