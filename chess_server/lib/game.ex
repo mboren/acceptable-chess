@@ -8,7 +8,7 @@ defmodule ChessApp.Game do
     black_captured_pieces: [],
     white_captured_pieces: []
   )
-  @type player_id :: reference
+  @type player_id :: reference | :nil
   @type player_color :: :white | :black
   @type move :: %{start: String.t, end: String.t} | %{start: String.t, end: String.t, promotion: String.t}
   @type move_with_san :: %{san: String.t, start: String.t, end: String.t} | %{san: String.t, start: String.t, end: String.t, promotion: String.t}
@@ -148,12 +148,9 @@ defmodule ChessApp.Game do
     }
   end
 
+  @spec have_both_players_connected?(%ChessApp.Game{white_player: player_id, black_player: player_id}) :: bool
   defp have_both_players_connected?(%ChessApp.Game{white_player: white, black_player: black}) do
-    case {white, black} do
-      {nil, _} -> false
-      {_, nil} -> false
-      {_, _} -> true
-    end
+    not is_nil(white) and not is_nil(black)
   end
 
   defp get_game_status(%ChessApp.Game{game_server: pid, player_resigned: nil}) do

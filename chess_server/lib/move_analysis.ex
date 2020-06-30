@@ -6,9 +6,8 @@ defmodule MoveAnalysis do
   This is mostly used for displaying moves in SAN format.
   """
   @type square :: String.t
-  @type move :: %{start: String.t, end: String.t} | %{start: String.t, end: String.t, promotion: promo_to}
+  @type move :: %{start: String.t, end: String.t} | %{start: String.t, end: String.t, promotion: String.t | nil}
   @type piece :: String.t
-  @type promo_to :: :q | :r | :b | :n
 
 
 

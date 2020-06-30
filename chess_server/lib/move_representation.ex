@@ -1,10 +1,10 @@
 defmodule MoveRepresentation do
   alias MoveAnalysis, as: MA
   @type square :: String.t
-  @type move :: %{start: String.t, end: String.t} | %{start: String.t, end: String.t, promotion: promo_to}
+  @type move :: %{start: String.t, end: String.t} | %{start: String.t, end: String.t, promotion: String.t | nil}
   @type piece :: String.t
-  @type promo_to :: :q | :r | :b | :n
 
+  @spec get_san(String.t(), [move], move) :: String.t()
   def get_san(fen, legal_moves, move = %{start: start_square, end: end_square, promotion: nil}) do
     piece_list = Position.fen_to_piece_list(fen)
     {:ok, piece} = Position.get_piece_at_square(start_square, piece_list)
@@ -38,7 +38,6 @@ defmodule MoveRepresentation do
     end
   end
 
-  @spec get_san(String.t(), [move], move) :: String.t()
   def get_san(fen, _legal_moves, %{start: start_square, end: end_square, promotion: promotion}) do
     piece_list = Position.fen_to_piece_list(fen)
     {:ok, destination_piece} = Position.get_piece_at_square(end_square, piece_list)
@@ -53,7 +52,7 @@ defmodule MoveRepresentation do
     end
   end
 
-  @spec promotion_to_string(promo_to) :: String.t
+  @spec promotion_to_string(String.t) :: String.t
   def promotion_to_string(promo) do
     "=" <> String.upcase(promo)
   end
