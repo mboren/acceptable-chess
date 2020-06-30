@@ -635,37 +635,45 @@ getPossibleMoveEndsFromSquare start moves =
         |> Set.fromList
 
 
-getClickableSquares : GameModel -> ( ( Set Square, Square -> Msg ), ( Set Square, Square -> Msg ) )
-getClickableSquares model =
+getRenderData : GameModel -> Board.RenderData Msg
+getRenderData model =
+    let
+        defaultRenderData : Board.RenderData Msg
+        defaultRenderData =
+            { selectablePieceSquares = Set.empty
+            , selectPieceEvent = NewSelectedMoveStart
+            , selectableMoveSquares = Set.empty
+            , selectMoveEvent = NewSelectedMoveEnd
+            , lastPly = Nothing
+            }
+    in
     case model of
         MyTurn data ->
+            let
+                lastPly = History.getLastPly data.history
+                renderData = {defaultRenderData | lastPly = lastPly}
+            in
             case data.selection of
                 SelectingStart ->
-                    ( ( getSelectablePieces data.legalMoves, NewSelectedMoveStart )
-                    , ( Set.empty, NewSelectedMoveEnd )
-                    )
+                    { renderData | selectablePieceSquares = getSelectablePieces data.legalMoves }
 
                 SelectingEnd start ->
-                    ( ( getSelectablePieces data.legalMoves, NewSelectedMoveStart )
-                    , ( getPossibleMoveEndsFromSquare start data.legalMoves, NewSelectedMoveEnd )
-                    )
+                    { renderData | selectablePieceSquares = getSelectablePieces data.legalMoves
+                    , selectableMoveSquares = getPossibleMoveEndsFromSquare start data.legalMoves}
 
                 SelectingPromotion _ _ _ ->
-                    ( ( Set.empty, NewSelectedMoveStart )
-                    , ( Set.empty, NewSelectedMoveEnd )
-                    )
+                    renderData
 
+        OtherPlayersTurn data ->
+            { defaultRenderData | lastPly = History.getLastPly data.history}
         _ ->
-            ( ( Set.empty, NewSelectedMoveStart )
-            , ( Set.empty, NewSelectedMoveEnd )
-            )
+            defaultRenderData
 
 
 view : Model -> Document Msg
 view model =
     let
-        ( selectablePieces, selectableMoves ) =
-            getClickableSquares model.gameModel
+        renderData = getRenderData model.gameModel
 
         width =
             min model.innerWidth maxWidth
@@ -692,7 +700,7 @@ view model =
                                     Resignation winner ->
                                         Player.toString winner ++ " wins by resignation"
                         in
-                        [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
+                        [ drawCommonGameItems width myEmotion otherPlayerEmotion data renderData
                         , Element.text reasonText
                         , restartGameButton
                         ]
@@ -720,26 +728,25 @@ view model =
                                     [ Element.width Element.fill ]
                                     [ history data.history
                                     , drawPlayerInfo otherPlayerEmotion (Player.toString (Player.other data.mySide)) data.otherPlayerLostPieces
-                                    , Board.drawFromFenWithPromotions width data.board data.mySide possiblePromotions PromotionSelected CancelPromotion (Element.text ("Error parsing FEN: " ++ data.board))
+                                    , Board.drawFromFenWithPromotions width data.board data.mySide (History.getLastPly data.history) possiblePromotions PromotionSelected CancelPromotion (Element.text ("Error parsing FEN: " ++ data.board))
                                     , drawPlayerInfo myEmotion (Player.toString data.mySide) data.myLostPieces
                                     ]
                                 ]
-
                             _ ->
-                                [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
+                                [ drawCommonGameItems width myEmotion otherPlayerEmotion data renderData
                                 , resignButton
                                 ]
 
                     WaitingForMoveToBeAccepted data ->
-                        [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
+                        [ drawCommonGameItems width myEmotion otherPlayerEmotion data renderData
                         , Element.text "waiting"
                         , resignButton
                         ]
 
                     OtherPlayersTurn data ->
-                        [ drawCommonGameItems width myEmotion otherPlayerEmotion data selectablePieces selectableMoves
-                        , Element.text "waiting for other player to move"
+                        [ drawCommonGameItems width myEmotion otherPlayerEmotion data renderData
                         , resignButton
+                        , Element.text "waiting for other player to move"
                         ]
                 )
             )
@@ -747,13 +754,13 @@ view model =
     }
 
 
-drawCommonGameItems : Int -> Emotion -> Emotion -> CommonModelData a -> ( Set Square, Square -> Msg ) -> ( Set Square, Square -> Msg ) -> Element Msg
-drawCommonGameItems innerWidth myEmotion otherPlayerEmotion data selectablePieces selectableMoves =
+drawCommonGameItems : Int -> Emotion -> Emotion -> CommonModelData a -> Board.RenderData Msg -> Element Msg
+drawCommonGameItems innerWidth myEmotion otherPlayerEmotion data renderData =
     Element.column
         [ Element.width Element.fill ]
         [ history data.history
         , drawPlayerInfo otherPlayerEmotion (Player.toString (Player.other data.mySide)) data.otherPlayerLostPieces
-        , Board.drawFromFen innerWidth data.board selectablePieces selectableMoves data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
+        , Board.drawFromFen innerWidth data.board renderData data.mySide (Element.text ("Error parsing FEN: " ++ data.board))
         , drawPlayerInfo myEmotion (Player.toString data.mySide) data.myLostPieces
         ]
 

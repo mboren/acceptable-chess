@@ -4,6 +4,7 @@ import Element exposing (Element)
 import Element.Background as Background
 import Element.Border
 import Element.Events
+import Move exposing (Move)
 import Piece exposing (Piece)
 import Player exposing (Player)
 import Set exposing (Set)
@@ -14,11 +15,26 @@ type alias Board =
     List (List (Maybe Piece))
 
 
-drawFromFen : Int -> String -> ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Player -> Element msg -> Element msg
-drawFromFen screenWidth fen selectablePieces selectableMoves bottomPlayer errorElement =
+type alias RenderData msg =
+    { selectablePieceSquares : Set Square
+    , selectPieceEvent : Square -> msg
+    , selectableMoveSquares : Set Square
+    , selectMoveEvent : Square -> msg
+    , lastPly : Maybe Move.MoveWithSan
+    }
+
+
+type alias RenderableSquare msg =
+    { piece : Maybe Piece
+    , properties : List (Element.Attribute msg)
+    }
+
+
+drawFromFen : Int -> String -> RenderData msg -> Player -> Element msg -> Element msg
+drawFromFen screenWidth fen renderData bottomPlayer errorElement =
     let
         squareDrawFunc =
-            drawSquare selectablePieces selectableMoves
+            \p s -> getSquareProperties renderData p s |> drawSquareWithAttributes
     in
     fen
         |> fenToBoard
@@ -26,8 +42,8 @@ drawFromFen screenWidth fen selectablePieces selectableMoves bottomPlayer errorE
         |> Maybe.withDefault errorElement
 
 
-drawFromFenWithPromotions : Int -> String -> Player -> List Piece -> (Piece -> msg) -> msg -> Element msg -> Element msg
-drawFromFenWithPromotions screenWidth fen bottomPlayer promotions promotionMsg cancelMsg errorElement =
+drawFromFenWithPromotions : Int -> String -> Player -> Maybe Move.MoveWithSan -> List Piece -> (Piece -> msg) -> msg -> Element msg -> Element msg
+drawFromFenWithPromotions screenWidth fen bottomPlayer lastPly promotions promotionMsg cancelMsg errorElement =
     let
         cancelOverlay =
             Element.inFront
@@ -42,10 +58,21 @@ drawFromFenWithPromotions screenWidth fen bottomPlayer promotions promotionMsg c
 
         promotionOverlay =
             Element.inFront (drawPromotions screenWidth promotions promotionMsg)
+
+        renderData =
+            { selectablePieceSquares = Set.empty
+            , selectPieceEvent = \_ -> cancelMsg
+            , selectableMoveSquares = Set.empty
+            , selectMoveEvent = \_ -> cancelMsg
+            , lastPly = lastPly
+            }
+
+        squareDrawFunc =
+            \p s -> getSquareProperties renderData p s |> drawSquareWithAttributes
     in
     fen
         |> fenToBoard
-        |> Maybe.map (\board -> draw screenWidth board bottomPlayer (drawSquareWithAttributes []) [ cancelOverlay, promotionOverlay ])
+        |> Maybe.map (\board -> draw screenWidth board bottomPlayer squareDrawFunc [ cancelOverlay, promotionOverlay ])
         |> Maybe.withDefault errorElement
 
 
@@ -146,7 +173,9 @@ drawPromotions screenWidth pieces event =
                             ]
                             (drawPiece (Just piece))
                     )
-        width = (screenWidth // 8) * (List.length pieces)
+
+        width =
+            (screenWidth // 8) * List.length pieces
     in
     Element.row
         [ Element.width (Element.px width)
@@ -157,47 +186,63 @@ drawPromotions screenWidth pieces event =
         promotions
 
 
-drawSquareWithAttributes attributes maybePiece square =
-    let
-        color =
-            if Square.isLight square then
-                Element.rgb255 237 238 210
-
-            else
-                Element.rgb255 0 150 53
-    in
+drawSquareWithAttributes : RenderableSquare msg -> Element msg
+drawSquareWithAttributes sq =
     Element.el
-        ([ Background.color color
-         , Element.padding 0
+        ([ Element.padding 0
          , Element.width Element.fill
          , Element.height Element.fill
          ]
-            ++ attributes
+            ++ sq.properties
         )
-        (drawPiece maybePiece)
+        (drawPiece sq.piece)
 
 
-drawSquare : ( Set Square, Square -> msg ) -> ( Set Square, Square -> msg ) -> Maybe Piece -> Square -> Element msg
-drawSquare ( selectablePieceSquares, selectPieceEvent ) ( selectableMoveSquares, selectMoveEvent ) maybePiece square =
+getSquareProperties : RenderData msg -> Maybe Piece -> Square -> RenderableSquare msg
+getSquareProperties renderData maybePiece square =
     let
         event =
-            if Set.member square selectablePieceSquares then
-                [ Element.Events.onClick (selectPieceEvent square) ]
+            if Set.member square renderData.selectablePieceSquares then
+                [ Element.Events.onClick (renderData.selectPieceEvent square) ]
 
-            else if Set.member square selectableMoveSquares then
-                [ Element.Events.onClick (selectMoveEvent square) ]
+            else if Set.member square renderData.selectableMoveSquares then
+                [ Element.Events.onClick (renderData.selectMoveEvent square) ]
 
             else
                 []
 
         overlay =
-            if Set.member square selectableMoveSquares then
-                possibleMoveOverlay
+            if Set.member square renderData.selectableMoveSquares then
+                [ Element.inFront possibleMoveOverlay ]
 
             else
-                Element.none
+                []
+
+        isPartOfLastPly =
+            case renderData.lastPly of
+                Nothing ->
+                    False
+
+                Just move ->
+                    move.start == square || move.end == square
+
+        color =
+            if Square.isLight square then
+                if not isPartOfLastPly then
+                    Element.rgb255 237 238 210
+
+                else
+                    Element.rgb255 255 0 210
+
+            else if not isPartOfLastPly then
+                Element.rgb255 0 150 53
+
+            else
+                Element.rgb255 255 0 53
     in
-    drawSquareWithAttributes (Element.inFront overlay :: event) maybePiece square
+    { piece = maybePiece
+    , properties = event ++ overlay ++ [ Background.color color ]
+    }
 
 
 orientBoard : Player -> List (List a) -> List (List a)
