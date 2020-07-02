@@ -41,8 +41,8 @@ defmodule ChessTown.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
-
-      {:chess_app, [path: "../chess_server"]},
+      {:binbo, "~> 1.2"},
+      {:chess_app, path: "lib/game_state"}
     ]
   end
 end

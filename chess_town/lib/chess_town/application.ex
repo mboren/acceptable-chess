@@ -9,7 +9,7 @@ defmodule ChessTown.Application do
     # List all child processes to be supervised
     children = [
       # Start the endpoint when the application starts
-      ChessTownWeb.Endpoint
+      ChessTownWeb.Endpoint,
       # Starts a worker by calling: ChessTown.Worker.start_link(arg)
       # {ChessTown.Worker, arg},
     ]
