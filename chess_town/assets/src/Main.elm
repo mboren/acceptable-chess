@@ -650,22 +650,28 @@ getRenderData model =
     case model of
         MyTurn data ->
             let
-                lastPly = History.getLastPly data.history
-                renderData = {defaultRenderData | lastPly = lastPly}
+                lastPly =
+                    History.getLastPly data.history
+
+                renderData =
+                    { defaultRenderData | lastPly = lastPly }
             in
             case data.selection of
                 SelectingStart ->
                     { renderData | selectablePieceSquares = getSelectablePieces data.legalMoves }
 
                 SelectingEnd start ->
-                    { renderData | selectablePieceSquares = getSelectablePieces data.legalMoves
-                    , selectableMoveSquares = getPossibleMoveEndsFromSquare start data.legalMoves}
+                    { renderData
+                        | selectablePieceSquares = getSelectablePieces data.legalMoves
+                        , selectableMoveSquares = getPossibleMoveEndsFromSquare start data.legalMoves
+                    }
 
                 SelectingPromotion _ _ _ ->
                     renderData
 
         OtherPlayersTurn data ->
-            { defaultRenderData | lastPly = History.getLastPly data.history}
+            { defaultRenderData | lastPly = History.getLastPly data.history }
+
         _ ->
             defaultRenderData
 
@@ -673,7 +679,8 @@ getRenderData model =
 view : Model -> Document Msg
 view model =
     let
-        renderData = getRenderData model.gameModel
+        renderData =
+            getRenderData model.gameModel
 
         width =
             min model.innerWidth maxWidth
@@ -732,6 +739,7 @@ view model =
                                     , drawPlayerInfo myEmotion (Player.toString data.mySide) data.myLostPieces
                                     ]
                                 ]
+
                             _ ->
                                 [ drawCommonGameItems width myEmotion otherPlayerEmotion data renderData
                                 , resignButton
