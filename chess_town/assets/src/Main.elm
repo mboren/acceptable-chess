@@ -808,11 +808,14 @@ drawEmotion emotion =
 resignButton : Element Msg
 resignButton =
     Element.Input.button
-        [ Element.Background.color (Element.rgb255 200 200 200)
+        [ Element.Background.color (Element.rgb255 255 90 120)
         , Element.padding 5
         , Border.rounded 10
+        , Element.height (Element.px 50)
+        , Element.width Element.fill
+        , Font.center
         ]
-        { onPress = Just Resign, label = Element.text "Offer resignation" }
+        { onPress = Just Resign, label = Element.text "Resign" }
 
 
 restartGameButton : Element Msg
