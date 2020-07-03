@@ -812,29 +812,30 @@ drawEmotion emotion =
         ]
         (Element.text face)
 
-
-resignButton : Element Msg
-resignButton =
+button : Element.Color -> Msg -> String -> Element Msg
+button color message text =
     Element.Input.button
-        [ Element.Background.color (Element.rgb255 255 90 120)
+        [ Element.Background.color color
         , Element.padding 5
         , Border.rounded 10
         , Element.height (Element.px 50)
         , Element.width Element.fill
         , Font.center
+        , Border.width 1
+        , Border.color color
+        , Element.mouseOver [Border.color (Element.rgb255 0 0 0)]
+
         ]
-        { onPress = Just Resign, label = Element.text "Resign" }
+        { onPress = Just message, label = Element.text text }
+
+resignButton : Element Msg
+resignButton =
+    button (Element.rgb255 255 90 120) Resign "Resign"
 
 
 restartGameButton : Element Msg
 restartGameButton =
-    Element.Input.button
-        [ Element.Background.color (Element.rgb255 200 200 200)
-        , Element.padding 5
-        , Border.rounded 10
-        ]
-        { onPress = Just RestartGame, label = Element.text "Rematch" }
-
+    button (Element.rgb255 255 90 120) RestartGame "Rematch"
 
 drawCapturedPieces : List Piece -> Element Msg
 drawCapturedPieces pieces =
