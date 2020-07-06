@@ -1,6 +1,7 @@
 # Acceptable chess
 
 Online chess game client/server. Playable, but still definitely WIP.
+Try it out [here](https://www.borentobewild.com/chess)
 ![chess](readme-images/side-by-side-opening-short.gif)
 
 # Technology
