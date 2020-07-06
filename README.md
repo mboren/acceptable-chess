@@ -48,8 +48,7 @@ mix phx.server
 ```
 - Open `localhost:4000/chess` in your browser.
 - Click "new game"
-- Copy the invite link and send it to a friend or open in an incognito window/other browser.
-
+- Copy the invite link and open in an incognito window/other browser.
 
 ## Running tests
 ### Elixir tests
