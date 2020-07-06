@@ -10,7 +10,7 @@ use Mix.Config
 # which you should run after static files are built and
 # before starting your production server.
 config :chess_town, ChessTownWeb.Endpoint,
-  url: [host: "www.borentobewild.com", port: 80],
+  url: [host: "borentobewild.com", port: 80],
   cache_static_manifest: "priv/static/cache_manifest.json",
   secret_key_base: Map.fetch!(System.get_env(), "SECRET_KEY_BASE"),
   server: true,
