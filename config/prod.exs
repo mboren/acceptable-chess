@@ -14,7 +14,7 @@ config :chess_town, ChessTownWeb.Endpoint,
   cache_static_manifest: "priv/static/cache_manifest.json",
   secret_key_base: Map.fetch!(System.get_env(), "SECRET_KEY_BASE"),
   server: true,
-  check_origin: ["www.borentobewild.com", "unselfish-lightslategray-acornbarnacle.gigalixirapp.com"]
+  check_origin: ["http://borentobewild.com", "unselfish-lightslategray-acornbarnacle.gigalixirapp.com"]
 
 # Do not print debug messages in production
 config :logger, level: :info
